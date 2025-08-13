@@ -1,0 +1,261 @@
+# How to mod a car for Asseto Corsa
+
+## Table of Contents
+
+- [REQUIREMENTS](#requirements)
+- [PROJECT AND FOLDER STRUCTURE](#project-and-folder-structure)
+- [BUDGET](#budget)
+- [SCENE STRUCTURE](#scene-structure)
+  - [MESH PARTS OF A GENERIC CAR MODEL](#mesh-parts-of-a-generic-car-model)
+  - [MESH NAMING CONVENTIONS](#mesh-naming-conventions)
+  - [SETTING UP THE CAR MODEL INSIDE THE 3D SPACE](#setting-up-the-car-model-inside-the-3d-space)
+  - [HIERARCHY and ORIENTATION](#hierarchy-and-orientation)
+- [FUNCTIONAL MESH ELEMENTS](#functional-mesh-elements)
+
+## REQUIREMENTS
+
+1. Export all files in the format supported by the **FBX version up to the 2014/2015** plugin for XSI and 3dsMAX.
+2. The FBX data used by the AC engine are following:
+   - Polygon mesh
+   - Normals (custom normals are supported)
+   - Texture coordinate UV (one layer only is read from the AC engine)
+   - Bones with vertex weight
+   - Nulls/dummies/nodes
+   - Hierarchy structure
+   - Animation data
+   - Basic mesh transformation (scale, rotation, position)
+
+**NOTE:**
+
+- **The AC engine does not support 2 OBJECTS with the same NAME in the same
+  model. This will cause the game to crash.**
+- Every mesh MUST have one TEXTURE UV set.
+- The mesh must be (when possible) in quads. Do NOT triangulate the mesh if it is not necessary.
+- For a skinned mesh you can have as many bones as needed, but every single vertex can be
+  influenced by up to 4 bones and not more.
+
+## PROJECT AND FOLDER STRUCTURE
+
+A vehicle project consists of a total of 5 models
+
+- high-poly models
+- 3 additional Level of Detail (LOD) models and a low-poly collider
+- The naming of the source files must be consistent with the make/type of the vehicle at hand
+
+The recommended way to set up your project folder is the following:
+
+```sh
+.
+├── animations/                  [File folder]
+├── PSD/                         [File folder]
+├── texture/                     [File folder]
+├── collider.fbx                 [FBX File]
+├── collider                     [Configuration settings]
+├── FORD_escort_MK1.kscp         [KSCP File]
+├── FORD_Escort_mk1_lod_A        [FBX File]
+├── FORD_Escort_mk1_lod_A        [Configuration settings]
+├── FORD_Escort_mk1_lod_B        [FBX File]
+├── FORD_Escort_mk1_lod_B        [Configuration settings]
+├── FORD_Escort_mk1_lod_C        [FBX File]
+├── FORD_Escort_mk1_lod_C        [Configuration settings]
+├── FORD_Escort_mk1_lod_D        [FBX File]
+└── FORD_Escort_mk1_lod_D        [Configuration settings]
+
+```
+
+**NOTE:**
+
+- The `.ini` files are created by the AC Editor and include the object and shader properties for the models.
+- The folder called `texture` is obligatory for the editor to load the texture files.
+- The `.kscp` file is a project file created by the AC Editor.
+
+## BUDGET
+
+The following triangle-counts are recommended in most cases.
+
+**Exterior:**
+
+- LOD A exterior: 125,000 triangles
+- LOD B exterior: 20,000-25,000 triangles
+- LOD C exterior: 10,000-12,000 triangles
+- LOD D exterior: 2,000-3,000 triangles (as low as possible while you can keep the main shape)
+
+**Interior:**
+
+- HR Cockpit: 125,000 triangles
+- LR Cockpit: 7,000-10,000 triangles
+- LR Cockpit in LOD B: 4,000 triangles (as low as possible while keeping a decent quality)
+- LR Cockpit in LOD C: 2,000 triangles (some detail must remain above window level)
+
+## SCENE STRUCTURE
+
+In order to work in-game, the car needs specific nulls to present in all LODs, making sure that all
+car parts are functioning properly.
+
+**Nulls that MUST be present in ALL LODs:**
+
+```
+SUSP_LF      suspension Left Front
+SUSP_LR      suspension Left Rear
+SUSP_RF      suspension Right Front
+SUSP_RR      suspension Right Rear
+WHEEL_LF     wheel Left Front
+WHEEL_LR     wheel Left Rear
+WHEEL_RF     wheel Right Front
+WHEEL_RR     wheel Right Rear
+COCKPIT_LR   cockpit Low resolution node
+STEER_LR     steer Low resolution node
+DISC_LF      brake disc Left Front
+DISC_LR      brake disc Left Rear
+DISC_RF      brake disc Right Front
+DISC_RR      brake disc Right Rear
+```
+
+There are secondary nulls that are needed to complete the car, but are not essential, so it
+means that in some cases those object can be excluded from certain LODs:
+
+```
+COCKPIT_HR   cockpit High resolution node (A only)
+STEER_HR     steer High resolution node (A only)
+RIM_LF       rim Left Front (A and B)
+RIM_LR       rim Left Rear (A and B)
+RIM_RF       rim Right Front (A and B)
+RIM_RR       rim Right Rear (A and B)
+RIM_BLUR_LF  rim Blurred Left Front (A and B)
+RIM_BLUR_LR  rim Blurred Left Rear (A and B)
+RIM_BLUR_RF  rim Blurred Right Front (A and B)
+RIM_BLUR_RR  rim Blurred Right Rear (A and B)
+```
+
+When it is required to manually animate the suspension, or the car has Dion axle suspension,
+you have to include some extra nulls in your scene:
+
+```
+REAR_AXLE    for the center of rotation of the Dion Trunk axle
+HUB_LF       Hub for the suspension Left Front
+HUB_LR       Hub for the suspension Left Rear
+HUB_RF       Hub for the suspension Right Front
+HUB_RR       Hub for the suspension Right Rear
+```
+
+Nulls/dummy used to define the broken glass mesh:
+
+```
+DAMAGE_GLASS_CENTER_1  (A and B)
+DAMAGE_GLASS_FRONT_1   (A and B)
+DAMAGE_GLASS_REAR_1    (A and B)
+DAMAGE_GLASS_LEFT_1    (A and B)
+DAMAGE_GLASS_RIGHT_1   (A and B)
+```
+
+For the DAMAGE of car elements, the following nulls must be placed in the PIVOT point of the
+object around which the object rotates upon impact. The naming conventions for damageable
+parts are the following:
+
+```
+FRONT_BUMPER    (A and B)
+REAR_BUMPER     (A and B)
+MOTORHOOD       (A and B)
+REAR_HOOD       (A and B)
+FRONT_WING      (A and B)
+REAR_WING       (A and B)
+REAR_EXTRACTOR  (A and B)
+```
+
+Additional dummies can be:
+
+```
+WIPER_#                for wiper animation (A, B and C)
+FRONT_LIGHT            for headlight animation (A, B and C)
+DISPLAY_DATA           for digital displays (A only)
+DOOR_L and DOOR_R      for exterior door animation (A and B)
+DOOR_L_1 and DOOR_R_1  for interior door animation (A only)
+```
+
+### MESH PARTS OF A GENERIC CAR MODEL
+
+The components of a car must be divided in many parts in order to manage animated objects, meshes
+and other features present in game. Here is a list of mandatory and optional mesh objects.
+
+**Common exterior parts:**
+
+```
+MAIN BODY        Required - must be present in LOD A and LOD B
+DOORS            optional - only in LOD A if present on the model. In LOD B the doors are not animated but welded to the main body
+MOTORHOOD        Depends on car type - if needed, must be present in LOD A and LOD B
+FRONT BUMPER     Depends on car type - if needed, must be present in LOD A and LOD B
+REAR BUMPER      Depends on car type - if needed, must be present in LOD A and B
+WHEEL HUB        Optional - contains the brake calipers must exist on LOD A and LOD B
+WHEEL RIM        Required - must be present in LOD A and LOD B. In LOD C the wheels are simplified.
+WHEEL RIM BLUR   Required - a version of the rim but with a blurred texture, must be present in LOD A and LOD B
+WHEEL TYRE       Required - must be present in LOD A and LOD B. In LOD C the wheels are simplified
+BRAKE DISK       Depends on car type - if needed, must be present in LOD A and LOD B
+FRONT LIGHT      Depends on car type - if needed, must be present in LOD A, LOD B and LOD C
+REAR LIGHT       Depends on car type - if needed, must be present in LOD A, LOD B and LOD C
+WIPERS           Depends on car type - if needed, must be present in LOD A, LOD B and LOD C
+FRONT WING       Depends on car type - if needed, must be present in LOD A, LOD B and LOD C
+REAR WING        Depends on car type - if needed, must be present in LOD A, LOD B and LOD C
+```
+
+**Cockpit mesh parts:**
+
+```
+COCKPIT_HR       Required - high resolution cockpit, the one that you see in cockpit view. Low Resolution (LR) version also required, including LOD B and LOD C
+STEER            Required - steering wheel HR and LR interior, LOD B and LOD C
+STEER PADDLE     Depends on car type, required also in Low Resolution (LR) and LOD B
+SHIFT            Depends on car type - required also in Low Resolution (LR) and LOD B
+SEATBELTS        Depends on car type - if needed, required also in Low Resolution (LR) and LOD B and LOD C. In LOD A, both ON and OFF position required. In LR, LOD B and C only the ON position model is needed! ON position needed only for the driver, not the passengers.
+```
+
+### MESH NAMING CONVENTIONS
+
+**NOTE:**
+
+- Use a pre-tag such as `MESH_` or `GEO_` for mesh objects to differentiate them from null objects.
+- Make sure you keep the same names for functional objects (lights and other emissives etc.) throughout the entire scene for all LODs to ensure that the scripts works as intended for each LOD.
+- You can choose to name your objects based on location (when using multi-materials), such as GEO_front_bumper and GEO_main_body (in this case there will be sub-objects divided by the editor at exporting), or based on material grouping, such as GEO_paint_body and GEO_chromes_body.
+
+### SETTING UP THE CAR MODEL INSIDE THE 3D SPACE
+
+**NOTE:**
+
+- The car must be oriented as shown in the image: The Z vector must be the front direction
+- The model must be placed with the wheels touching the ground on the 0 coordinate (Y)
+- The model bounding box must be centered in `YXZ = 0.0.0`.
+- The car must have 4 different Level of Detail models that must share the same position and orientation!
+
+![Car Position](./assets/car_position.png)
+
+### HIERARCHY and ORIENTATION
+
+**NOTE:**
+
+- Any object that is not a child of a NULL/ DUMMY will be managed like part of the CAR CHASSIS.
+- All the pieces of the geometry that belong to the car must be placed in a HIERARCHY to define the specific properties of each mesh object in the game.
+
+![Tyre Arch](./assets/tyre_arch.png)
+
+**NOTE:**
+
+- Remember that every NULL is also the CENTER of rotation. If your mesh is not properly placed under a NULL with a correct center of rotation, the mesh will rotate the wrong way.
+- See the example on the left: the geometry of the WHEEL is centered exactly on the NULL.
+- The **BRAKE DISK** must have the center in the same EXACT position of the wheel and the rims.
+
+![Tyre Position](./assets/tyre_position.png)
+
+## FUNCTIONAL MESH ELEMENTS
+
+### LEDs and DIGITAL DISPLAYS
+
+Each individual LED (such as for RPM, boost or KERS) or bar TAG must be a separate object and
+numbered in a series:
+
+```
+LED_RPM_# where the “#” is the number of each specific item in a series
+TAG_RPM_#
+KERS_CHARGE_#
+KERS_INPUT_#
+TURBO_#
+```
+
+![Display](./assets/display.png)
