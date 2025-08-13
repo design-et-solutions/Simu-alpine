@@ -259,3 +259,61 @@ TURBO_#
 ```
 
 ![Display](./assets/display.png)
+
+There are two ways to control specific items on the dashboard.
+
+- The first one is where the mesh is always present and the script controls the emissive value on a per object basis. This is the method used for RPM LED series, headlight indicators and ignition status lights.
+- The second method the mesh is disabled by default and the script controls how and when it should appear with the shader and object properties set up in the editor. It should be noted that the meshes appear in the editor and the showroom. This is used for dynamic RPM bar graphs, boost bar graphs, fuel level bars, shift indicators, fuel warning lights and KERS bar graphs.
+
+![Display Dynamic Elements](./assets/display_dyn_elements.png)
+
+**NOTE:**
+
+- Do NOT use the convention `_01`, `_02`, `_03` etc. for single digits for the suffix of tag
+  object names, always use `_0`, `_1`, `_2` etc. E.g. `LED_RPM_0`, `LED_RPM_1` etc.
+
+  The following items are currently supported by the game engine:
+
+  ```
+  Time
+  Gear
+  Speed
+  RPM
+  Water temperature
+  Fuel level (bar graph)
+  Fuel level (litres)
+  KERS charge (bar graph)
+  KERS input (bar graph)
+  Turbo boost (bar graph)
+  Turbo boost (pressure)
+  Lap time
+  Previous lap time
+  Difference from previous lap
+  TC setting
+  ABS setting
+  Headlight indicator
+  Fuel warning light
+  Current lap
+  Total laps
+  Ambient temperature
+  Km with current fuel left
+  KERS charge readout
+  Estimated fuel
+  Any RPM-dependent status indicator
+  Tyre pressure
+  G-meter
+  Placeholder script for any static text or numbers
+  ```
+
+  **IMPORTANT:**
+  - If there is a digital display, create a NULL called DISPLAY_DATA with the orientation shown in the image below.
+  - The `DISPLAY_DATA` null is the reference for the items in the `digital_instruments.ini`, it serves as a reference point and makes sure the text appears on the same surface as the display. For this reason if the display is rotated/tilted, the null must follow the same orientation.
+  - To avoid clipping, place the null so that its pivot point is in front of the mesh by a few millimetres and not directly on it.
+
+  See [details](https://www.assettocorsa.net/forum/index.php?threads/analog-digital-instruments-lights-q-a-request-official-support-here-check-first-post.12249/)
+
+DISPLAY_DATA null orientation and examples:
+
+![Display KERS Bar](./assets/display_kers_bar.png)
+![Display LED RPM](./assets/display_led_rpm.png)
+![Display Tag RPM](./assets/display_tag_rpm.png)
