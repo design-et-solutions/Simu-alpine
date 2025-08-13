@@ -11,6 +11,37 @@
   - [SETTING UP THE CAR MODEL INSIDE THE 3D SPACE](#setting-up-the-car-model-inside-the-3d-space)
   - [HIERARCHY and ORIENTATION](#hierarchy-and-orientation)
 - [FUNCTIONAL MESH ELEMENTS](#functional-mesh-elements)
+  - [LEDs and DIGITAL DISPLAYS](#leds-and-digital-displays)
+  - [SEATBELTS](#seatbelts)
+  - [LIGHT MESH AND SCRIPTS](#light-mesh-and-scripts)
+  - [SKINNED MESH](#skinned-mesh)
+  - [DRIVER POSITION AND MESH](#driver-position-and-mesh)
+  - [DRIVER ANIMATIONS](#driver-animations)
+  - [DRIVER SCRIPTS](#driver-scripts)
+  - [COLLIDER](#collider)
+- [FUNCTIONAL TEXTURES](#functional-textures)
+  - [CAR SHADOWS](#car-shadows)
+  - [CAR MIRRORS](#car-mirrors)
+  - [INTERNAL WINDSCREEN AND DOOR GLASS REFLECTION](#internal-windscreen-and-door-glass-reflection)
+  - [DAMAGE GLASS](#damage-glass)
+  - [CAR DAMAGE](#car-damage)
+- [TEXTURING GUIDELINES](#texturing-guidlines)
+  - [TEXTURE NAMING CONVENTIONS FOR PSD SOURCE FILES](#texture-naming-conventions-for-psd-source-files)
+  - [EXPORTING TEXTURES AND OPTIMISATION](#exporting-textures-and-optimisation)
+  - [OPTIMAL USE OF TEXTURE SPACE](#optimal-use-of-texture-space)
+  - [BAKING THE AMBIENT OCCLUSION](#baking-the-ambient-occlusion)
+- [ANIMATIONS](#animations)
+  - [SUSPENSION ANIMATION](#suspension-animation)
+  - [SUSPENSION HIERARCHY](#suspension-hierarchy)
+  - [STEER ARMS AND DIRECTION CONSTRAINTS](#steer-arms-and-direction-constraints)
+  - [CONSTRAINT FULL ANIMATION SETUP](#constraint-full-animation-setup)
+  - [ANIMATION EXPORTING](#animation-exporting)
+  - [CLIPS AND NAMING CONVENTIONS](#clips-and-naming-conventions)
+  - [EXPORTING ANIMATIONS FROM THE EDITOR](#exporting-animations-from-the-editor)
+  - [CHECKING CAR ANIMATIONS](#checking-car-animations)
+  - [GENERIC ANIMATION EXPORTING GUIDELINES](#generic-animation-exporting-guidelines)
+- [MATERIALS](#materials)
+  - [MATERIAL NAMING CONVENTIONS](#material-naming-conventions)
 
 ## REQUIREMENTS
 
@@ -317,3 +348,374 @@ DISPLAY_DATA null orientation and examples:
 ![Display KERS Bar](./assets/display_kers_bar.png)
 ![Display LED RPM](./assets/display_led_rpm.png)
 ![Display Tag RPM](./assets/display_tag_rpm.png)
+
+### SEATBELTS
+
+The cockpit contains two different mesh objects for the belts: One for the belt ON and another for the belt OFF.
+These two meshes must be linked as a child of the null COCKPIT_HR and must be named as follows:
+
+```
+CINTURE_ON    for the belt on the driver when is driving
+CINTURE_OFF   for the belt on the seat, without driver (showroom view)
+```
+
+![Seatbelt](./assets/seatbelt.png)
+
+The seatbelt mesh must be modelled also in the cockpit LR but only the CINTURE_ON mesh.
+
+**NOTE:**
+
+- The names are in ITALIAN (CINTURE = SEATBELT)
+- The seatbelt mesh must be modelled also in the cockpit LR but only the CINTURE_ON mesh.
+
+### LIGHT MESH AND SCRIPTS
+
+The light mesh objects must be separated and detached from the body of the car and use specific naming conventions.
+The mesh name must be controlled from the `lights.ini` script.
+The same scripts include the instructions for the ON/OFF conditions, as well as the light emission colour.
+
+![Light](./assets/light.png)
+![Light Arch](./assets/light_arch.png)
+
+**NOTE:**
+
+- There is no need to split the lights up as “right” and “left”. They can be one mesh because they turn on together.
+
+**IMPORTANT:**
+
+- Each light source must be **detached** as a separate object, avoid keeping all the difference reflectors and bulbs in one object.
+- This way, each element can be controlled individually to achieve realistic results
+
+![Light Arch Advance](./assets/light_arch_advance.png)
+
+The script `lights.ini` contains the following values:
+
+```
+[HEADER]
+VERSION=3               Script version. Keep this value like is.
+
+[BRAKE_0]
+NAME=REAR_LIGHT         name of the mesh to light up
+COLOR=500,60,40 RGB     value when you press the brake pedal
+OFF_COLOR=50,12,8 RGB   value for position light when brakes are off
+
+[LIGHT_0]
+NAME=FRONT_LIGHT name   of the mesh to light up
+COLOR=240,195,180 RGB   emissive value when the front light is on
+OFF_COLOR=50,50,70 RGB  emissie value for day-light (optional)
+```
+
+The COLOR= value assigns a colour when the brakes are on (you are pressing brake pedal).
+The line below OFF_COLOR= is the emissive value of the brake light (in some cars, the same mesh is lit up when you turn the lights on and when you brake).
+
+**NOTE:**
+
+- For a glowing brake light we recommend an R (red) value between 150 and 850.
+- For day running lights, we recommend values between 40 and 100.
+- For high beams, we recommend values ranging from 250 to 800.
+
+### SKINNED MESH
+
+**Maybe interasting**
+
+### DRIVER POSITION AND MESH
+
+**Maybe interasting**
+
+### DRIVER ANIMATIONS
+
+**Maybe interasting**
+
+### DRIVER SCRIPTS
+
+**Maybe interasting**
+
+### COLLIDER
+
+The collider shape must be a simple solid object with as low polygon count as possible, without any UV or texture.
+The collider’s pivot must be in the `0,0,0` coordinates and have the same orientation as the wheel dummies.
+
+**Rules for collider objects:**
+
+1. The collider should have no more than 40/60 triangles.
+2. A material called `GL` must be assigned to the collider inside the editor. This is a special material specifically made for a mesh that is not rendered. Meshes with this material are used only for collisions.
+3. The collider must not extend below the floor of the car.
+4. The collider must have no holes. The mesh must be completely closed.
+5. Once the collision mesh is done, simply export the kn5 from the editor, using name `collider.kn5`.
+
+![Collider](./assets/collider.png)
+![Collider Position](./assets/collider_position.png)
+
+**IMPORTANT:**
+
+- Make sure you save with NO textures!
+- The file must be placed in the same folder as the car LODs with the name `collider.kn5`.
+
+## FUNCTIONAL TEXTURES
+
+### CAR SHADOWS
+
+For each car there are five shadow textures.
+Four textures dedicated to each wheel and another one for the car body.
+
+**NOTE:**
+
+- If not present, the car body texture is automatically generated once in game, otherwise an existing one is used.
+- The auto-generated shadow of the car is very ROUGH. They must be edited in order to obtain a smoother result.
+
+**See docs if needed one**
+
+### CAR MIRRORS
+
+In order to make car mirrors work, a material must be created (the name is not important), and assigned to the mirror mesh objects.
+This texture is mirrored and the UV must be mirrored as well to make sure it appears correctly.
+
+The texture is divided in three areas:
+
+- CENTRAL must fit the central internal mirror of the car.
+- The red shows the left,
+- while the blue shows the right hand side mirror.
+
+**IMPORTANT:**
+
+- The mesh must be mapped with the texture called `MIRROR_PLACEMENT`.
+
+**NOTE:**
+
+- The 2 points at the center of the lines indicate a point that must be placed in the center of the mirror to make sure that the cars behind can be clearly seen.
+- remember to keep the correct aspect ratio of mirror UV, otherwise the image of the reflection will be distorted.
+- The image ratio of the `MIRROR PLACEMENT` template is `4:1`.
+- Only use the `MIRROR_PLACEMENT` texture for UV mapping, the actual texture in the editor should be a flat texture named `mirror.dds`.
+
+![Texture Miror](./assets/texture_miror.png)
+![Miror](./assets/miror.png)
+
+### INTERNAL WINDSCREEN AND DOOR GLASS REFLECTION
+
+**Maybe interasting**
+
+### DAMAGE GLASS
+
+The car can have 2 kinds of damage: damage to glass objects and the body.
+
+For the glass we have to do the following:
+
+1. Duplicate the glass object, assign to it a new material and map it using the texture you can find in the Texture common folder called `Glass_Crack_00.psd`.
+2. Then, move it away (0.5mm or less) from the original glass to avoid clipping.
+3. Try to map the glass approximately as shown here (at least for the front windscreen), because the broken glass must allow the driver to see the road in the game.
+4. The cracks must be more visible in the corners and less so in the center.
+
+![Glass Crack](./assets/glass_crack.png)
+
+**See docs if needed one**
+
+### CAR DAMAGE
+
+**Maybe interasting**
+
+## TEXTURING GUIDELINES
+
+The supported texture format is: **directX DDS**
+
+This format can be outputted from Photoshop (for example) using the specific nVidia plugin [here](https://developer.nvidia.com/legacy-texture-tools).
+
+Inside every folder we need a base layer that allows us to change important features of the texture. Follow these rules:
+
+- If the texture has an ALPHA CHANNEL, do not collapse transparent features, keep the transparent features in a specific layer.
+- If there is a normal map, provide in the layer also the greyscale texture so that it can be re-generated with the nVidia tool.
+- ALWAYS work with DOUBLE resolution (no more no less) of the target image and shrink it to the right size only when you export the DDS. Test your results to be sure that the reduction does not spoil the image too much (this could happen with tiny texts or symbols).
+- All PSD files must be in RGB Color 8 bit for channel mode
+- Name them correctly following our naming conventions.
+- use the DXT5 compression for high-resolution textures.
+
+![Texture PSD Arch](./assets/texture_psd_arch.png)
+
+### TEXTURE NAMING CONVENTIONS FOR PSD SOURCE FILES
+
+```
+Skin.PSD                    contains the main body textures
+Ambient occlusion
+Wireframe                   (UV)
+RGB Map                     (material specular-gloss-ref map)
+Material IDs and zones
+Alpha channel
+
+Ext_Details.PSD             contains rivets, bolts, logos, and decals on the exterior
+Diffuse
+Normal map
+Ambient occlusion
+RGB Map                     (material specular-gloss-ref map)
+Alpha channel
+
+Rims.PSD                    contains rim base and rim blur texture plus the blurred spokes
+Diffuse
+Normal map
+Ambient occlusion
+RGB Map                     (material specular-gloss-ref map)
+Alpha channel
+
+Calipers.psd                contains the brake caliper texture
+Diffuse
+Normal map
+Ambient occlusion
+RGB Map                     (material specular-gloss-ref map)
+Alpha channel
+
+Lights.psd                  contains the light texture
+Diffuse
+Normal map
+Ambient occlusion
+RGB Map                     (material specular-gloss-ref map)
+Alpha channel
+
+Mechanics.psd               contains the underside, engine and all the parts that are not included in the skin
+Wireframe                   (UV)
+Diffuse
+Normal map
+Ambient occlusion
+RGB Map                     (material specular-gloss-ref map)
+Alpha channel
+
+Glass.psd                   contains the glass texture and all similar parts such as black frame
+Diffuse
+Normal map
+Alpha channel
+
+Grids.psd                   contains tileable grids and similar textures (use more if needed)
+Diffuse
+Normal map
+Ambient occlusion
+RGB Map                     (material specular-gloss-ref map)
+Alpha channel
+
+Tyre.psd                    contains tyre textures with blur and dirt
+Wireframe                   (UV)
+Diffuse
+Normal map
+Ambient occlusion
+Alpha channel
+
+Disc.psd                    contains the brake disc texture and the glow texture
+Wireframe                   (UV)
+Diffuse
+RGB Normal map
+Glow map
+Windscreen.psd              contains the fake internal glass reflection
+Diffuse
+Alpha channel
+
+INT_Decals.psd              contains dials, dashboard symbols, cockpit details and logos, plates and interior bolts and stickers
+Diffuse
+Normal map
+Ambient occlusion
+RGB Map                     (material specular-gloss-ref map)
+Alpha channel
+
+INT_Details.psd             contains coloured gradients and other details to use for smaller objects
+Diffuse
+Normal map
+Ambient occlusion
+Alpha channel
+
+INT_Occlusion.psd           contains the cockpit ambient occlusion texture
+Wire frame stamp
+Diffuse
+Normal map
+Ambient occlusion
+RGB Map                     (material specular-gloss-ref map)
+Alpha channel
+
+Belts.PSD                   contains cockpit belts
+Diffuse
+Normal map
+Seams.psd                   contains stitching, seams, and similar textures in tileable form
+Diffuse
+Normal map
+
+INT_cockpit_LR.psd          contains cockpit LOW RESOLUTION texture
+Ambient occlusion
+Wire frame stamp
+RGB Map                     (material specular-gloss-ref map)
+Material ID and zones
+Alpha channel
+```
+
+All the extra textures that can occur and are not mentioned here can have a name that explains in brief what they contain.
+
+### EXPORTING TEXTURES AND OPTIMISATION
+
+**Maybe interasting**
+
+### OPTIMAL USE OF TEXTURE SPACE
+
+**Maybe interasting**
+
+### BAKING THE AMBIENT OCCLUSION
+
+**Maybe interasting**
+
+## ANIMATIONS
+
+### SUSPENSION ANIMATION
+
+**Maybe interasting**
+
+### SUSPENSION HIERARCHY
+
+The following DUMMY/NULLs are mandatory:
+
+```
+SUSP_LF           Left Front
+SUSP_LR           Left Rear
+SUSP_RF           Right Front
+SUSP_RR           Right Rear
+
+HUB_LF            Left Front
+HUB_LR            Left Rear
+HUB_RF            Right Front
+HUB_RR            Right Rear
+
+WHEEL_LF          parent of the TYRE_LF for the tyre mesh, RIM_LF for the Rim mesh, and RIM_BLUR_LF for the Rim Blurred mesh
+WHEEL_LR          parent of the TYRE_LR for the tyre mesh, RIM_LR for the Rim mesh, and RIM_BLUR_LR for the Rim Blurred mesh
+WHEEL_LR          parent of the TYRE_LR for the tyre mesh, RIM_LR for the Rim mesh, and RIM_BLUR_LR for the Rim Blurred mesh
+WHEEL_RR          parent of the TYRE_RR for the tyre mesh, RIM_RR for the Rim mesh, and RIM_BLUR_RR for the Rim Blurred mesh
+```
+
+**NOTE:**
+In order to have a correct direction of rotation, the Z axis of the transmission nulls always need to point forward.
+
+**See docs if needed one**
+
+### STEER ARMS AND DIRECTION CONSTRAINTS
+
+**Maybe interasting**
+
+### CONSTRAINT FULL ANIMATION SETUP
+
+**Maybe interasting**
+
+### ANIMATION EXPORTING
+
+**Maybe interasting**
+
+### CLIPS AND NAMING CONVENTIONS
+
+**Maybe interasting**
+
+### EXPORTING ANIMATIONS FROM THE EDITOR
+
+**Maybe interasting**
+
+### CHECKING CAR ANIMATIONS
+
+**Maybe interasting**
+
+### GENERIC ANIMATION EXPORTING GUIDELINES
+
+**Maybe interasting**
+
+## MATERIALS
+
+### MATERIAL NAMING CONVENTIONS
+
+**Maybe interasting**
