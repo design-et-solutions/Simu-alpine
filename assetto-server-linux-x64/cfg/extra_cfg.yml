@@ -33,7 +33,7 @@ LockServerDate: true
 # Reduce track grip when the track is wet. This is much worse than proper CSP rain physics but allows you to run clients with public/Patreon CSP at the same time
 RainTrackGripReductionPercent: 0
 # Enable AI traffic
-EnableAi: false
+EnableAi: true
 # List of plugins to enable
 EnablePlugins: []
 # Ignore some common configuration errors. More info: https://assettoserver.org/docs/common-configuration-errors
@@ -43,13 +43,13 @@ IgnoreConfigurationErrors:
   WrongServerDetails: false
   UnsafeAdminWhitelist: false
 # Enable CSP client messages feature. Requires CSP 0.1.77+
-EnableClientMessages: false
+EnableClientMessages: true
 # Enable CSP UDP client messages feature. Required for VR head/hand syncing. Requires CSP 0.1.80+
-EnableUdpClientMessages: false
+EnableUdpClientMessages: true
 # Log unknown CSP Lua client messages / online events
-DebugClientMessages: false
+DebugClientMessages: true
 # Enable CSP custom position updates. This is an improved version of batched position updates, reducing network traffic even further. CSP 0.1.77+ required
-EnableCustomUpdate: false
+EnableCustomUpdate: true
 # Maximum time a player can spend on the loading screen before being disconnected
 PlayerLoadingTimeoutMinutes: 10
 # Maximum time the server will wait for a checksum response before disconnecting the player
@@ -57,7 +57,7 @@ PlayerChecksumTimeoutSeconds: 40
 # Port to control the server using Source RCON protocol. 0 to disable.
 RconPort: 0
 # Dump contents of welcome message and CSP extra options to a file. For debug purposes only.
-DebugWelcomeMessage: false
+DebugWelcomeMessage: true
 # Force clients to use track params (coordinates, time zone) specified on the server. CSP 0.1.79+ required
 ForceServerTrackParams: false
 # Allow cars to have multiple data checksums. Instead of a single checksummed data.acd, you can have multiple data*.acd files in the car folder and players can join with any of these files
