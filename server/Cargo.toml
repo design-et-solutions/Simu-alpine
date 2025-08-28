@@ -1,0 +1,37 @@
+[package]
+name = "backend"
+version = "0.1.0"
+authors = ["wallago <45556867+wallago@users.noreply.github.com>"]
+edition = "2024"
+
+[dependencies]
+actix = "0.13.1"
+actix-cors = "0.7.0"
+actix-http = "3.6.0"
+actix-rt = "2.9.0"
+actix-web = { version = "4.4.0", features = ["openssl"] }
+actix-web-actors = "4.2.0"
+serde = { version = "1.0", features = ["derive"] }
+anyhow = "1.0.98"
+diesel = { version = "2.2.10", features = ["sqlite", "r2d2"] }
+dotenvy = "0.15.7"
+log_manager = "0.1.2"
+tracing = "0.1.41"
+tokio = { version = "1.36.0", features = ["full"] }
+diesel-derive-enum = { version = "2.1.0", features = ["sqlite"] }
+uuid = { version = "1.17.0", features = ["serde", "v4"] }
+chrono = { version = "0.4.41", features = ["serde"] }
+env_logger = "0.11.8"
+sqlx = { version = "0.8.6", features = [
+  "chrono",
+  "macros",
+  "runtime-tokio",
+  "postgres",
+  "uuid",
+] }
+regex = "1.11.1"
+openssl = "0.10.73"
+actix-files = "0.6.6"
+serde_json = "1.0.142"
+actix-ws = "0.3.0"
+futures-util = "0.3.31"

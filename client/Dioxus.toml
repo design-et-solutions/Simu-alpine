@@ -1,0 +1,20 @@
+[application]
+asset_dir = "assets"
+
+[web.app]
+title = "simu-alpine"
+
+[web.watcher]
+reload_html = true
+watch_path = ["src", "public"]
+
+# include `assets` in web platform
+[web.resource]
+
+# Additional CSS style files
+style = []
+
+# Additional JavaScript files
+script = []
+
+[web.resource.dev]

@@ -1,78 +1,48 @@
-use anyhow::Result;
-use byteorder::{LittleEndian, WriteBytesExt};
-use std::{
-    net::{ToSocketAddrs, UdpSocket},
-    thread::{sleep, spawn},
-    time::Duration,
-};
+use dioxus::prelude::*;
+use views::*;
 
-#[repr(C)]
-struct Handshaker {
-    identifier: i32,
-    version: i32,
-    operation_id: i32,
+use crate::api::AcsVehicleInfo;
+
+mod api;
+mod views;
+
+#[derive(Debug, Clone, Routable, PartialEq)]
+#[rustfmt::skip]
+enum Route {
+    #[layout(MainLayout)]
+        #[route("/")]
+        Home {},
 }
 
-impl Handshaker {
-    fn to_bytes(&self) -> Result<Vec<u8>> {
-        let mut buf = Vec::with_capacity(12);
-        buf.write_i32::<LittleEndian>(self.identifier)?;
-        buf.write_i32::<LittleEndian>(self.version)?;
-        buf.write_i32::<LittleEndian>(self.operation_id)?;
-        Ok(buf)
+const FAVICON: Asset = asset!("/assets/favicon.ico", ImageAssetOptions::new().with_avif());
+const THEME_CSS: Asset = asset!("/assets/theme.css");
+const STYLE_CSS: Asset = asset!("/assets/style.css");
+
+fn main() {
+    dioxus::launch(App);
+}
+
+#[derive(Debug, Clone)]
+pub struct TelemetryCtx(pub Signal<Option<AcsVehicleInfo>>);
+
+#[component]
+fn App() -> Element {
+    use_context_provider(|| TelemetryCtx(Signal::new(None)));
+    rsx! {
+        document::Link { rel: "icon", href: FAVICON }
+        document::Link { rel: "stylesheet", href: THEME_CSS }
+        document::Link { rel: "stylesheet", href: STYLE_CSS }
+        Router::<Route> {}
     }
 }
 
-#[repr(C)]
-struct HandshakerResponse {
-    car_name: [u8; 50],
-    driver_name: [u8; 50],
-    identifier: i32,
-    version: i32,
-    track_name: [u8; 50],
-    track_config: [u8; 50],
-}
-
-fn main() -> Result<()> {
-    tracing_subscriber::fmt::init();
-
-    // --- TELEMETRY LISTENER ---
-    spawn(|| {
-        let server_addr = "127.0.0.1:5000";
-        tracing::info!("Listening on UDP port {server_addr} ...");
-        let telemetry_socket = UdpSocket::bind(server_addr).unwrap();
-
-        let mut buf = [0u8; 2048];
-        loop {
-            let size = telemetry_socket.recv(&mut buf).unwrap();
-            tracing::warn!("Received {} bytes", size);
-            tracing::warn!("{:02x?}", &buf[..size]);
-
-            // Optionally: send ACK back to plugin
-            // telemetry_socket.send_to(&buf[..size], "127.0.0.1:5000").unwrap();
+#[component]
+pub fn MainLayout() -> Element {
+    rsx! {
+        div { class: "main-container",
+            div { class: "content-container",
+                Outlet::<Route> {}
+            }
         }
-    });
-
-    let server_addr = "127.0.0.1:9600";
-    tracing::info!("Connecting to server at {server_addr} ...");
-    let server_addr = server_addr
-        .to_socket_addrs()?
-        .next()
-        .expect("Invalid address");
-    let socket = UdpSocket::bind("0.0.0.0:0")?;
-    socket.connect(server_addr)?;
-
-    let handshake = Handshaker {
-        identifier: 1,
-        version: 1,
-        operation_id: 0,
-    };
-    let buf = handshake.to_bytes()?;
-
-    socket.send(&buf)?;
-    tracing::info!("Handshake sent.");
-
-    sleep(Duration::new(60, 0));
-
-    Ok(())
+    }
 }

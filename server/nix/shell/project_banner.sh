@@ -1,0 +1,12 @@
+REV="\033[7m"
+NOR="\033[0m"
+BLD="\033[1m"
+DIM="\033[2m"
+
+echo -e "┌──────────────────────────────────────────────┐"
+echo -e "│$DIM Product:                    $NOR$BLD Picture Perfect $NOR│"
+echo -e "│$DIM Part:                       $NOR$BLD         Backend $NOR│"
+echo -e "│$DIM Code:                       $NOR$BLD SW25-PICP-BCK01 $NOR│"
+echo -e "├╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┤"
+echo -e "│ (c)        Property of $BLD$REV ✱ $NOR$BLD Snow Laboratories │"
+echo -e "└──────────────────────────────────────────────┘"
