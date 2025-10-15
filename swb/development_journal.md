@@ -44,4 +44,7 @@ But with this we lost force feedback into Simucube 2 Pro because is not directly
 
 ### Tools
 
+- Virtual Joystick: [vJoy](https://sourceforge.net/projects/vjoystick/)
 - Adjusts force feedback gain in real time: [Assetto-Corsa-FFBAntiClip](https://github.com/Damgam/Assetto-Corsa-FFBAntiClip)
+- Spy current FFB level and any clipping: [FFBClip app 5.3](https://www.overtake.gg/downloads/ffbclip-app.7910/?utm_source=chatgpt.com)
+- Simucube API [sc-api](https://github.com/Simucube/sc-api)
