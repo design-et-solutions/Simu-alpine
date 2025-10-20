@@ -1,14 +1,26 @@
 use anyhow::{Context, Result};
 use std::ffi::c_void;
 use std::ptr::null_mut;
+use std::sync::Mutex;
+use std::thread::sleep;
+use std::time::Duration;
 use windows::{
     Win32::{
         Devices::HumanInterfaceDevice::*,
-        System::{Com::*, Console::*, LibraryLoader::*, Threading::*},
-        UI::WindowsAndMessaging::*,
+        Foundation::*,
+        Graphics::Gdi::*,
+        System::{Com::*, LibraryLoader::*},
+        UI::Input::KeyboardAndMouse::*,
+        UI::WindowsAndMessaging::{DefWindowProcW, WNDCLASSW, *},
     },
     core::*,
 };
+
+type DWORD = u32;
+
+lazy_static::lazy_static! {
+    static ref FFB_AXES: Mutex<Vec<DWORD>> = Mutex::new(Vec::new());
+}
 
 unsafe extern "system" fn enum_devices_callback(
     device_instance: *mut DIDEVICEINSTANCEW,
@@ -34,6 +46,56 @@ unsafe extern "system" fn enum_devices_callback(
         }
     }
     BOOL(1)
+}
+
+unsafe extern "system" fn window_proc(
+    hwnd: HWND,
+    msg: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+) -> LRESULT {
+    unsafe {
+        match msg {
+            WM_DESTROY => {
+                PostQuitMessage(0);
+                LRESULT(0)
+            }
+            _ => DefWindowProcW(hwnd, msg, wparam, lparam),
+        }
+    }
+}
+
+unsafe fn create_message_window() -> Result<HWND> {
+    unsafe {
+        let hinstance = GetModuleHandleW(None)?;
+        let wc = WNDCLASSW {
+            lpfnWndProc: Some(window_proc),
+            hInstance: hinstance.into(),
+            lpszClassName: w!("DummyWindowClass"),
+            ..Default::default()
+        };
+        RegisterClassW(&wc);
+
+        let hwnd = CreateWindowExW(
+            Default::default(),
+            w!("DummyWindowClass"),
+            w!("Simucube Test"),
+            WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+            CW_USEDEFAULT,
+            CW_USEDEFAULT,
+            400,
+            200,
+            None,
+            None,
+            Some(hinstance.into()),
+            None,
+        )?;
+        let _ = ShowWindow(hwnd, SW_SHOW);
+        let _ = UpdateWindow(hwnd);
+        let _ = SetForegroundWindow(hwnd);
+        let _ = SetFocus(Some(hwnd));
+        Ok(hwnd)
+    }
 }
 
 fn main() -> Result<()> {
@@ -77,8 +139,8 @@ fn main() -> Result<()> {
             .find(|(name, _)| name.contains("Simucube 2 Pro"))
         {
             println!("Simucube 2 Pro found");
-            println!("--------------------");
-            println!("{:?}", instance);
+            // println!("--------------------");
+            // println!("{:?}", instance);
             println!("--------------------");
 
             println!("Create device");
@@ -86,68 +148,58 @@ fn main() -> Result<()> {
             di.CreateDevice(&instance.guidInstance, &mut device_opt, None)
                 .context("Failed to create device")?;
             let device = device_opt.context("Device not found")?;
-
-            println!("Configure device");
-            // AllocConsole()?;
-            // let hwnd = GetConsoleWindow();
-            let hwnd = CreateWindowExW(
-                Default::default(),
-                w!("STATIC"),
-                w!("FFB Test Window"),
-                WS_OVERLAPPEDWINDOW,
-                CW_USEDEFAULT,
-                CW_USEDEFAULT,
-                100,
-                100,
-                None,
-                None,
-                None,
-                None,
-            )?;
+            println!("Setup Window");
+            let hwnd = create_message_window()?;
             println!("Console HWND = {:?}", hwnd);
-            device.SetCooperativeLevel(hwnd, DISCL_FOREGROUND | DISCL_EXCLUSIVE)?;
+
+            sleep(Duration::from_secs(1));
+
+            device.SetCooperativeLevel(hwnd, DISCL_EXCLUSIVE | DISCL_FOREGROUND)?;
+            unsafe extern "C" {
+                static c_dfDIJoystick2: DIDATAFORMAT;
+            }
+            device.SetDataFormat(&c_dfDIJoystick2 as *const _ as *mut _)?;
             device.Acquire()?;
+            println!("Acquire pass successfully");
 
             println!("Create FFB effect");
-            let direction: [i32; 2] = [0, 0];
-            let constant_force = DICONSTANTFORCE {
-                lMagnitude: 5000, // out of ±10 000 range — tune this
-            };
-            let mut axes: [u32; 1] = [0];
+            let mut axis = [0];
+            let mut direction = Box::new([1i32]);
+            let mut constant_force = Box::new(DICONSTANTFORCE { lMagnitude: 5000 });
+
             let mut effect = DIEFFECT {
-                dwSize: std::mem::size_of::<DIEFFECT>() as u32,
+                dwSize: std::mem::size_of::<DIEFFECT>() as DWORD,
                 dwFlags: DIEFF_CARTESIAN | DIEFF_OBJECTOFFSETS,
-                dwDuration: INFINITE,
-                dwGain: 10_000, // max gain
-                cAxes: 1,
-                rgdwAxes: axes.as_mut_ptr(),
-                rglDirection: direction.as_ptr() as *mut i32,
-                lpEnvelope: null_mut(),
-                cbTypeSpecificParams: std::mem::size_of::<DICONSTANTFORCE>() as u32,
-                lpvTypeSpecificParams: &constant_force as *const _ as *mut c_void,
+                dwDuration: 10_000_000,
+                dwGain: 5000,
                 dwTriggerButton: DIEB_NOTRIGGER,
-                dwSamplePeriod: 0,
-                dwStartDelay: 0,
                 dwTriggerRepeatInterval: 0,
+                cAxes: 1,
+                rgdwAxes: axis.as_mut_ptr(),
+                rglDirection: direction.as_mut_ptr(),
+                lpEnvelope: std::ptr::null_mut(),
+                cbTypeSpecificParams: std::mem::size_of::<DICONSTANTFORCE>() as DWORD,
+                lpvTypeSpecificParams: &mut constant_force as *mut _ as *mut c_void,
+                ..Default::default()
             };
+            println!("Effect parameters: {:#?}", effect);
+
             let mut effect_ptr: Option<IDirectInputEffect> = None;
             device.CreateEffect(&GUID_ConstantForce, &mut effect, &mut effect_ptr, None)?;
-            println!("Effect created!");
+            println!("Effect created successfully!");
 
-            if let Some(eff) = effect_ptr {
-                eff.Download()?;
-                println!("Effect downloaded.");
+            let eff = effect_ptr.unwrap();
+            eff.Start(1, 0)?;
+            println!("FFB effect running...");
 
-                eff.Start(1, 0)?; // 1 iteration, 0 flags
-                println!("Effect started! The wheel should now be centered.");
-            }
+            println!("FFB effect: {:#?}", eff);
+            sleep(Duration::from_secs(2));
+
+            eff.Stop()?;
+            println!("FFB effect stopped.");
         } else {
             println!("Simucube 2 Pro not found");
         }
-
-        use std::time::Duration;
-        loop {
-            std::thread::sleep(Duration::from_secs(1));
-        }
+        Ok(())
     }
 }
