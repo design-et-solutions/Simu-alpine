@@ -102,12 +102,12 @@ fn main() -> Result<()> {
             println!("Create FFB effect");
             let mut axis = [0];
             let mut direction = Box::new([1i32]);
-            let mut constant_force = Box::new(DICONSTANTFORCE { lMagnitude: 0 });
+            let mut constant_force = Box::new(DICONSTANTFORCE { lMagnitude: 5000 });
 
             let mut effect = DIEFFECT {
                 dwSize: std::mem::size_of::<DIEFFECT>() as DWORD,
                 dwFlags: DIEFF_CARTESIAN | DIEFF_OBJECTOFFSETS,
-                dwDuration: INFINITE,
+                dwDuration: 10_000_000,
                 dwGain: 5000,
                 dwTriggerButton: DIEB_NOTRIGGER,
                 dwTriggerRepeatInterval: 0,
@@ -126,7 +126,8 @@ fn main() -> Result<()> {
             println!("Effect created successfully!");
 
             let eff = effect_ptr.unwrap();
-            eff.Start(1, DIEP_START | DIEP_NORESTART)?;
+            // eff.Start(1, DIEP_START | DIEP_NORESTART)?;
+            eff.Start(1, 0)?;
             println!("FFB effect running...");
 
             loop {
@@ -136,21 +137,21 @@ fn main() -> Result<()> {
                     let wtext: Vec<u16> = text.encode_utf16().chain(std::iter::once(0)).collect();
                     SetWindowTextW(hwnd, PCWSTR(wtext.as_ptr()))?;
 
-                    constant_force.lMagnitude = (data.finalFF * 5000.0) as i32; // scale to device
+                    // constant_force.lMagnitude = (data.finalFF * 5000.0) as i32; // scale to device
 
-                    let mut params = DIEFFECT {
-                        dwSize: std::mem::size_of::<DIEFFECT>() as DWORD,
-                        lpvTypeSpecificParams: &mut constant_force as *mut _ as *mut _,
-                        cbTypeSpecificParams: std::mem::size_of::<DICONSTANTFORCE>() as DWORD,
-                        dwFlags: DIEFF_CARTESIAN
-                            | DIEFF_OBJECTOFFSETS
-                            | DIEP_DIRECTION
-                            | DIEP_TYPESPECIFICPARAMS,
-                        ..Default::default()
-                    };
+                    // let mut params = DIEFFECT {
+                    //     dwSize: std::mem::size_of::<DIEFFECT>() as DWORD,
+                    //     lpvTypeSpecificParams: &mut constant_force as *mut _ as *mut _,
+                    //     cbTypeSpecificParams: std::mem::size_of::<DICONSTANTFORCE>() as DWORD,
+                    //     dwFlags: DIEFF_CARTESIAN
+                    //         | DIEFF_OBJECTOFFSETS
+                    //         | DIEP_DIRECTION
+                    //         | DIEP_TYPESPECIFICPARAMS,
+                    //     ..Default::default()
+                    // };
 
-                    let _ =
-                        eff.SetParameters(&mut params, DIEP_TYPESPECIFICPARAMS | DIEP_DIRECTION);
+                    // let _ =
+                    //     eff.SetParameters(&mut params, DIEP_TYPESPECIFICPARAMS | DIEP_DIRECTION);
                 }
                 std::thread::sleep(Duration::from_millis(20));
             }
