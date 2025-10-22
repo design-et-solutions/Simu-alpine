@@ -1,4 +1,5 @@
-use super::AC_DATA;
+use std::sync::{Arc, Mutex};
+
 use anyhow::Result;
 use windows::{
     Win32::{
@@ -11,7 +12,12 @@ use windows::{
     core::*,
 };
 
-pub unsafe fn create_window(title: &str, class: &str, is_fg: bool) -> Result<HWND> {
+pub unsafe fn create_window(
+    title: &str,
+    class: &str,
+    is_fg: bool,
+    // data: Arc<Mutex<f32>>,
+) -> Result<HWND> {
     let class_w: Vec<u16> = class.encode_utf16().chain(std::iter::once(0)).collect();
     let title_w: Vec<u16> = title.encode_utf16().chain(std::iter::once(0)).collect();
     unsafe {
@@ -26,6 +32,7 @@ pub unsafe fn create_window(title: &str, class: &str, is_fg: bool) -> Result<HWN
             lpszClassName: PCWSTR(class_w.as_ptr()),
             ..Default::default()
         };
+
         RegisterClassW(&wc);
 
         let hwnd = CreateWindowExW(
@@ -40,7 +47,7 @@ pub unsafe fn create_window(title: &str, class: &str, is_fg: bool) -> Result<HWN
             None,
             None,
             Some(hinstance.into()),
-            None,
+            None, // Some(Arc::into_raw(data.clone()) as *const std::ffi::c_void),
         )?;
         let _ = ShowWindow(hwnd, SW_SHOW);
         let _ = UpdateWindow(hwnd);
@@ -75,17 +82,24 @@ unsafe extern "system" fn window_proc_fg(
 ) -> LRESULT {
     unsafe {
         match msg {
+            WM_NCCREATE => {
+                let createstruct = lparam.0 as *const CREATESTRUCTW;
+                let data_ptr = (*createstruct).lpCreateParams as *mut Arc<Mutex<f32>>;
+                SetWindowLongPtrW(hwnd, GWLP_USERDATA, data_ptr as isize);
+                DefWindowProcW(hwnd, msg, wparam, lparam)
+            }
             WM_PAINT => {
-                let mut ps = PAINTSTRUCT::default();
-                let hdc = BeginPaint(hwnd, &mut ps);
-                let ac_data = *AC_DATA.lock().unwrap();
-                let text = format!("FFB Torque: {:.2}", ac_data.finalFF);
-                let wtext: Vec<u16> = text.encode_utf16().collect();
-                let _ = TextOutW(hdc, 10, 10, &wtext);
-                // let text = format!("Steering Angle: {:.2}", ac_data.steerAngle);
-                // let wtext: Vec<u16> = text.encode_utf16().collect();
-                // let _ = TextOutW(hdc, 10, 60, &wtext);
-                let _ = EndPaint(hwnd, &ps);
+                // let data_ptr = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut Arc<Mutex<f32>>;
+                // if !data_ptr.is_null() {
+                //     let data = &*data_ptr;
+                //     let torque = *data.lock().unwrap();
+                //     let mut ps = PAINTSTRUCT::default();
+                //     let hdc = BeginPaint(hwnd, &mut ps);
+                //     let text = format!("FFB Torque: {:.2}", torque);
+                //     let wtext: Vec<u16> = text.encode_utf16().chain(Some(0)).collect();
+                //     let _ = TextOutW(hdc, 10, 10, &wtext);
+                //     let _ = EndPaint(hwnd, &ps);
+                // }
                 LRESULT(0)
             }
             WM_DESTROY => {
