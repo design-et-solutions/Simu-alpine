@@ -12,22 +12,13 @@ use windows::{
     core::*,
 };
 
-pub unsafe fn create_window(
-    title: &str,
-    class: &str,
-    is_fg: bool,
-    // data: Arc<Mutex<f32>>,
-) -> Result<HWND> {
+pub unsafe fn create_window(title: &str, class: &str) -> Result<HWND> {
     let class_w: Vec<u16> = class.encode_utf16().chain(std::iter::once(0)).collect();
     let title_w: Vec<u16> = title.encode_utf16().chain(std::iter::once(0)).collect();
     unsafe {
         let hinstance = GetModuleHandleW(None)?;
         let wc = WNDCLASSW {
-            lpfnWndProc: Some(if is_fg {
-                window_proc_fg
-            } else {
-                window_proc_bg
-            }),
+            lpfnWndProc: Some(window_proc),
             hInstance: hinstance.into(),
             lpszClassName: PCWSTR(class_w.as_ptr()),
             ..Default::default()
@@ -53,28 +44,12 @@ pub unsafe fn create_window(
         let _ = UpdateWindow(hwnd);
         let _ = SetForegroundWindow(hwnd);
         let _ = SetFocus(Some(hwnd));
+        println!("Window has been setup");
         Ok(hwnd)
     }
 }
 
-unsafe extern "system" fn window_proc_bg(
-    hwnd: HWND,
-    msg: u32,
-    wparam: WPARAM,
-    lparam: LPARAM,
-) -> LRESULT {
-    unsafe {
-        match msg {
-            WM_DESTROY => {
-                PostQuitMessage(0);
-                LRESULT(0)
-            }
-            _ => DefWindowProcW(hwnd, msg, wparam, lparam),
-        }
-    }
-}
-
-unsafe extern "system" fn window_proc_fg(
+unsafe extern "system" fn window_proc(
     hwnd: HWND,
     msg: u32,
     wparam: WPARAM,

@@ -16,16 +16,9 @@ use crate::DWORD;
 
 pub unsafe fn initialize_dirent_input() -> Result<IDirectInput8W> {
     unsafe {
-        // Initialize COM
-        CoInitializeEx(None, COINIT_MULTITHREADED);
-
-        // Get module handle
+        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
         let hmodule = GetModuleHandleW(None)?;
-
-        // Prepare Option<IDirectInput8W> to receive the COM object
         let mut di_ptr: *mut IDirectInput8W = null_mut();
-
-        // Call DirectInput8Create
         DirectInput8Create(
             hmodule.into(),
             DIRECTINPUT_VERSION,
@@ -33,8 +26,6 @@ pub unsafe fn initialize_dirent_input() -> Result<IDirectInput8W> {
             &mut di_ptr as *mut _ as *mut _,
             None,
         )?;
-
-        // Wrap it safely
         let di: IDirectInput8W = IDirectInput8W::from_raw(di_ptr as *mut _);
 
         println!("DirectInput initialized!");
@@ -42,7 +33,7 @@ pub unsafe fn initialize_dirent_input() -> Result<IDirectInput8W> {
     }
 }
 
-pub unsafe fn found_device(di: IDirectInput8W) -> Result<(String, DIDEVICEINSTANCEW)> {
+pub unsafe fn found_device(di: &IDirectInput8W) -> Result<(String, DIDEVICEINSTANCEW)> {
     unsafe {
         let mut devices: Vec<(String, DIDEVICEINSTANCEW)> = Vec::new();
         di.EnumDevices(
@@ -61,7 +52,7 @@ pub unsafe fn found_device(di: IDirectInput8W) -> Result<(String, DIDEVICEINSTAN
     }
 }
 
-pub unsafe extern "system" fn enum_devices_callback(
+unsafe extern "system" fn enum_devices_callback(
     device_instance: *mut DIDEVICEINSTANCEW,
     context: *mut std::ffi::c_void,
 ) -> BOOL {
@@ -88,7 +79,7 @@ pub unsafe extern "system" fn enum_devices_callback(
 }
 
 pub unsafe fn create_device(
-    di: IDirectInput8W,
+    di: &IDirectInput8W,
     instance: DIDEVICEINSTANCEW,
     hwnd: HWND,
 ) -> Result<IDirectInputDevice8W> {
@@ -114,7 +105,7 @@ pub unsafe fn create_device(
     }
 }
 
-pub unsafe fn create_effect(device: IDirectInputDevice8W) -> Result<IDirectInputEffect> {
+pub unsafe fn create_effect(device: &IDirectInputDevice8W) -> Result<IDirectInputEffect> {
     unsafe {
         let mut axis = [0];
         let mut direction = Box::new([1i32]);
@@ -135,6 +126,7 @@ pub unsafe fn create_effect(device: IDirectInputDevice8W) -> Result<IDirectInput
             lpvTypeSpecificParams: &mut constant_force as *mut _ as *mut c_void,
             ..Default::default()
         };
+
         println!("Effect parameters: {:#?}", effect);
 
         let mut effect_ptr: Option<IDirectInputEffect> = None;
@@ -142,6 +134,28 @@ pub unsafe fn create_effect(device: IDirectInputDevice8W) -> Result<IDirectInput
         let effect = effect_ptr.ok_or_else(|| anyhow::anyhow!("Failed to create effect"))?;
         println!("Effect created successfully!");
         Ok(effect)
+    }
+}
+
+pub unsafe fn update_effect(effect: &IDirectInputEffect, magnitude: f32) -> Result<()> {
+    unsafe {
+        let scaled = (magnitude.clamp(-1.0, 1.0) * 10000.0) as i32;
+
+        let mut constant_force = DICONSTANTFORCE { lMagnitude: scaled };
+
+        let mut dieffect = DIEFFECT {
+            dwSize: std::mem::size_of::<DIEFFECT>() as u32,
+            cbTypeSpecificParams: std::mem::size_of::<DICONSTANTFORCE>() as u32,
+            lpvTypeSpecificParams: &mut constant_force as *mut _ as *mut std::ffi::c_void,
+            dwFlags: DIEFF_OBJECTOFFSETS | DIEFF_CARTESIAN,
+            // We only update parameters, not axes or direction
+            ..Default::default()
+        };
+
+        // Update the effect’s type-specific parameters
+        effect.SetParameters(&mut dieffect, DIEP_TYPESPECIFICPARAMS)?;
+
+        Ok(())
     }
 }
 
