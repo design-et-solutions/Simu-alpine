@@ -139,6 +139,7 @@ pub unsafe fn create_effect(device: &IDirectInputDevice8W) -> Result<IDirectInpu
 
 pub unsafe fn update_effect(effect: &IDirectInputEffect, magnitude: f32) -> Result<()> {
     unsafe {
+        println!("FFB effect update (DEBUG)");
         let scaled = (magnitude.clamp(-1.0, 1.0) * 10000.0) as i32;
 
         let mut constant_force = DICONSTANTFORCE { lMagnitude: scaled };
@@ -154,6 +155,7 @@ pub unsafe fn update_effect(effect: &IDirectInputEffect, magnitude: f32) -> Resu
 
         // Update the effect’s type-specific parameters
         effect.SetParameters(&mut dieffect, DIEP_TYPESPECIFICPARAMS)?;
+        println!("FFB effect updated");
 
         Ok(())
     }

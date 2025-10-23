@@ -63,20 +63,7 @@ unsafe extern "system" fn window_proc(
                 SetWindowLongPtrW(hwnd, GWLP_USERDATA, data_ptr as isize);
                 DefWindowProcW(hwnd, msg, wparam, lparam)
             }
-            WM_PAINT => {
-                // let data_ptr = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *mut Arc<Mutex<f32>>;
-                // if !data_ptr.is_null() {
-                //     let data = &*data_ptr;
-                //     let torque = *data.lock().unwrap();
-                //     let mut ps = PAINTSTRUCT::default();
-                //     let hdc = BeginPaint(hwnd, &mut ps);
-                //     let text = format!("FFB Torque: {:.2}", torque);
-                //     let wtext: Vec<u16> = text.encode_utf16().chain(Some(0)).collect();
-                //     let _ = TextOutW(hdc, 10, 10, &wtext);
-                //     let _ = EndPaint(hwnd, &ps);
-                // }
-                LRESULT(0)
-            }
+            WM_PAINT => LRESULT(0),
             WM_DESTROY => {
                 PostQuitMessage(0);
                 LRESULT(0)

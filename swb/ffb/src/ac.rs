@@ -6,6 +6,7 @@ use windows::{Win32::System::Memory::*, core::*};
 
 pub fn read_ac_data() -> Result<FFBData> {
     unsafe {
+        println!("Get AC data (DEBUG)");
         let name = CString::new("Local\\acpmf_physics")?;
         let mapping = OpenFileMappingA(FILE_MAP_READ.0, false, PCSTR(name.as_ptr() as *const u8))?;
 
@@ -21,9 +22,9 @@ pub fn read_ac_data() -> Result<FFBData> {
         }
         let physics: &SPageFilePhysics = &*(ptr.Value as *const SPageFilePhysics);
         UnmapViewOfFile(ptr as _)?;
+        println!("Getting AC data (DEBUG)");
         Ok(FFBData {
             finalFF: physics.finalFF,
-            // steerAngle: physics.steerAngle,
         })
     }
 }
