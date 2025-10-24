@@ -105,38 +105,6 @@ pub unsafe fn create_device(
     }
 }
 
-pub unsafe fn create_effect(device: &IDirectInputDevice8W) -> Result<IDirectInputEffect> {
-    unsafe {
-        let mut axis = [0];
-        let mut direction = Box::new([1i32]);
-        let mut constant_force = Box::new(DICONSTANTFORCE { lMagnitude: 5000 });
-
-        let mut effect = DIEFFECT {
-            dwSize: std::mem::size_of::<DIEFFECT>() as DWORD,
-            dwFlags: DIEFF_CARTESIAN | DIEFF_OBJECTOFFSETS,
-            dwDuration: 10_000_000,
-            dwGain: 5000,
-            dwTriggerButton: DIEB_NOTRIGGER,
-            dwTriggerRepeatInterval: 0,
-            cAxes: 1,
-            rgdwAxes: axis.as_mut_ptr(),
-            rglDirection: direction.as_mut_ptr(),
-            lpEnvelope: std::ptr::null_mut(),
-            cbTypeSpecificParams: std::mem::size_of::<DICONSTANTFORCE>() as DWORD,
-            lpvTypeSpecificParams: &mut constant_force as *mut _ as *mut c_void,
-            ..Default::default()
-        };
-
-        println!("Effect parameters: {:#?}", effect);
-
-        let mut effect_ptr: Option<IDirectInputEffect> = None;
-        device.CreateEffect(&GUID_ConstantForce, &mut effect, &mut effect_ptr, None)?;
-        let effect = effect_ptr.ok_or_else(|| anyhow::anyhow!("Failed to create effect"))?;
-        println!("Effect created successfully!");
-        Ok(effect)
-    }
-}
-
 pub unsafe fn update_effect(effect: &IDirectInputEffect, magnitude: f32) -> Result<()> {
     unsafe {
         println!("FFB effect update (DEBUG)");
@@ -161,15 +129,101 @@ pub unsafe fn update_effect(effect: &IDirectInputEffect, magnitude: f32) -> Resu
     }
 }
 
-pub unsafe fn run_effect(effect: &IDirectInputEffect) -> Result<()> {
+pub unsafe fn create_constant_force(device: &IDirectInputDevice8W) -> Result<IDirectInputEffect> {
     unsafe {
-        effect.Start(1, 0)?;
-        println!("FFB effect running...");
+        let mut axis = [0];
+        let mut direction = Box::new([1i32]);
+        let mut constant_force = Box::new(DICONSTANTFORCE { lMagnitude: 10000 });
 
-        println!("FFB effect: {:#?}", effect);
-        sleep(Duration::from_secs(2));
+        let mut effect = DIEFFECT {
+            dwSize: std::mem::size_of::<DIEFFECT>() as DWORD,
+            dwFlags: DIEFF_CARTESIAN | DIEFF_OBJECTOFFSETS,
+            dwDuration: 0xFFFFFFFF,
+            dwGain: 5000,
+            dwTriggerButton: DIEB_NOTRIGGER,
+            dwTriggerRepeatInterval: 0,
+            cAxes: 1,
+            rgdwAxes: axis.as_mut_ptr(),
+            rglDirection: direction.as_mut_ptr(),
+            lpEnvelope: std::ptr::null_mut(),
+            cbTypeSpecificParams: std::mem::size_of::<DICONSTANTFORCE>() as DWORD,
+            lpvTypeSpecificParams: &mut constant_force as *mut _ as *mut c_void,
+            ..Default::default()
+        };
 
-        effect.Stop()?;
-        Ok(println!("FFB effect stopped."))
+        println!("Effect parameters: {:#?}", effect);
+
+        let mut effect_ptr: Option<IDirectInputEffect> = None;
+        device.CreateEffect(&GUID_ConstantForce, &mut effect, &mut effect_ptr, None)?;
+        let effect = effect_ptr.ok_or_else(|| anyhow::anyhow!("Failed to create effect"))?;
+        println!("Effect created successfully!");
+        Ok(effect)
+    }
+}
+
+pub unsafe fn create_spring(device: &IDirectInputDevice8W) -> Result<IDirectInputEffect> {
+    unsafe {
+        let mut axes = [0];
+        let mut direction = [0];
+
+        // Spring parameters
+        let mut condition = DICONDITION {
+            lOffset: 0,                 // Neutral position (center)
+            lPositiveCoefficient: 5000, // Force towards center
+            lNegativeCoefficient: 5000,
+            dwPositiveSaturation: 10000,
+            dwNegativeSaturation: 10000,
+            lDeadBand: 0,
+        };
+
+        let mut effect = DIEFFECT {
+            dwSize: std::mem::size_of::<DIEFFECT>() as u32,
+            dwFlags: DIEFF_CARTESIAN | DIEFF_OBJECTOFFSETS,
+            cAxes: 1,
+            rgdwAxes: axes.as_mut_ptr(),
+            rglDirection: direction.as_mut_ptr(),
+            cbTypeSpecificParams: std::mem::size_of::<DICONDITION>() as u32,
+            lpvTypeSpecificParams: &mut condition as *mut _ as *mut _,
+            dwDuration: 0xFFFFFFFF,
+            dwGain: 10000,
+            ..Default::default()
+        };
+
+        let mut effect_ptr: Option<IDirectInputEffect> = None;
+        device.CreateEffect(&GUID_Spring, &mut effect, &mut effect_ptr, None)?;
+        Ok(effect_ptr.ok_or_else(|| anyhow::anyhow!("Failed to create spring effect"))?)
+    }
+}
+
+pub unsafe fn create_damper(device: &IDirectInputDevice8W) -> Result<IDirectInputEffect> {
+    unsafe {
+        let mut axes = [0];
+        let mut direction = [0];
+
+        let mut condition = DICONDITION {
+            lOffset: 0,
+            lPositiveCoefficient: 3000, // Resistance
+            lNegativeCoefficient: 3000,
+            dwPositiveSaturation: 10000,
+            dwNegativeSaturation: 10000,
+            lDeadBand: 0,
+        };
+
+        let mut effect = DIEFFECT {
+            dwSize: std::mem::size_of::<DIEFFECT>() as u32,
+            dwFlags: DIEFF_CARTESIAN | DIEFF_OBJECTOFFSETS,
+            cAxes: 1,
+            rgdwAxes: axes.as_mut_ptr(),
+            rglDirection: direction.as_mut_ptr(),
+            cbTypeSpecificParams: std::mem::size_of::<DICONDITION>() as u32,
+            lpvTypeSpecificParams: &mut condition as *mut _ as *mut _,
+            dwDuration: 0xFFFFFFFF,
+            dwGain: 10000,
+            ..Default::default()
+        };
+
+        let mut effect_ptr: Option<IDirectInputEffect> = None;
+        device.CreateEffect(&GUID_Damper, &mut effect, &mut effect_ptr, None)?;
+        Ok(effect_ptr.ok_or_else(|| anyhow::anyhow!("Failed to create damper effect"))?)
     }
 }

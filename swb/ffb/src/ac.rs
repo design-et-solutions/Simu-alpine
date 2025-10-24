@@ -19,12 +19,12 @@ pub fn read_ac_data() -> Option<FFBData> {
             match OpenFileMappingA(FILE_MAP_READ.0, false, PCSTR(name.as_ptr() as *const u8)) {
                 Ok(handle) => handle,
                 Err(e) => {
-                    eprintln!("[AC FFB] Could not open shared memory mapping: {e}");
+                    println!("[AC FFB] Could not open shared memory mapping: {e}");
                     return None;
                 }
             };
         if mapping.is_invalid() {
-            eprintln!("[AC FFB] Could not open shared memory mapping (AC not running?)");
+            println!("[AC FFB] Could not open shared memory mapping (AC not running?)");
             return None;
         }
         let view = MapViewOfFile(
@@ -37,7 +37,7 @@ pub fn read_ac_data() -> Option<FFBData> {
         if view.Value.is_null() {
             eprintln!("[AC FFB] Failed to map view of file");
             if let Err(e) = CloseHandle(mapping) {
-                eprintln!("[AC FFB] CloseHandle failed: {e}");
+                println!("[AC FFB] CloseHandle failed: {e}");
                 return None;
             }
             return None;
@@ -46,16 +46,17 @@ pub fn read_ac_data() -> Option<FFBData> {
         let physics_ptr = view.Value as *const SPageFilePhysics;
         let physics = ptr::read_unaligned(physics_ptr);
         if let Err(e) = UnmapViewOfFile(view as _) {
-            eprintln!("[AC FFB] UnmapViewOfFile failed: {e}");
+            println!("[AC FFB] UnmapViewOfFile failed: {e}");
             return None;
         }
         if let Err(e) = CloseHandle(mapping) {
-            eprintln!("[AC FFB] CloseHandle failed: {e}");
+            println!("[AC FFB] CloseHandle failed: {e}");
             return None;
         }
 
         Some(FFBData {
             final_ff: physics.finalFF,
+            steer_angle: physics.steerAngle,
         })
     }
 }
