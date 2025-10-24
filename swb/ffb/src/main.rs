@@ -18,8 +18,9 @@ mod device;
 mod model;
 mod window;
 
+#[derive(Debug)]
 struct FFBData {
-    finalFF: f32,
+    final_ff: f32,
 }
 
 fn main() -> Result<()> {
@@ -32,28 +33,26 @@ fn main() -> Result<()> {
         effect.Start(1, 0)?;
 
         println!("FFB effect running...");
-        if let Err(err) = loop_ac(&effect) {
-            println!("AAAAAAAAAAAAA: {:?}", err);
-        }
-        println!("FFB effect stopping...");
+        loop_ac(&effect)?;
         // loop_rand(&effect)?;
+        println!("FFB effect stopping...");
         Ok(())
     }
 }
 
-fn loop_ac(effect: &IDirectInputEffect) -> Result<()> {
+unsafe fn loop_ac(effect: &IDirectInputEffect) -> Result<()> {
     loop {
         match read_ac_data() {
-            Ok(data) => {
-                println!("Current FFB torque: {:.2}", data.finalFF);
+            Some(data) => {
+                println!("Current FFB torque: {:.2}", data.final_ff);
                 unsafe {
-                    if let Err(err) = update_effect(effect, data.finalFF) {
+                    if let Err(err) = update_effect(effect, data.final_ff) {
                         println!("Update FFB failed: {:?}", err);
                     }
                 }
             }
-            Err(err) => {
-                println!("Read AC data failed: {:?}", err);
+            None => {
+                println!("Read AC data failed");
             }
         }
         std::thread::sleep(Duration::from_millis(20));

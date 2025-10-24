@@ -1,30 +1,61 @@
 use super::model::SPageFilePhysics;
 use crate::FFBData;
-use anyhow::{Result, anyhow};
-use std::{ffi::CString, mem};
-use windows::{Win32::System::Memory::*, core::*};
+use std::{ffi::CString, mem, ptr};
+use windows::{
+    Win32::{Foundation::CloseHandle, System::Memory::*},
+    core::*,
+};
 
-pub fn read_ac_data() -> Result<FFBData> {
+pub fn read_ac_data() -> Option<FFBData> {
     unsafe {
-        println!("Get AC data (DEBUG)");
-        let name = CString::new("Local\\acpmf_physics")?;
-        let mapping = OpenFileMappingA(FILE_MAP_READ.0, false, PCSTR(name.as_ptr() as *const u8))?;
-
-        let ptr = MapViewOfFile(
+        let name = match CString::new(r"Local\acpmf_physics") {
+            Ok(n) => n,
+            Err(e) => {
+                eprintln!("[AC FFB] Failed to create CString: {e}");
+                return None;
+            }
+        };
+        let mapping =
+            match OpenFileMappingA(FILE_MAP_READ.0, false, PCSTR(name.as_ptr() as *const u8)) {
+                Ok(handle) => handle,
+                Err(e) => {
+                    eprintln!("[AC FFB] Could not open shared memory mapping: {e}");
+                    return None;
+                }
+            };
+        if mapping.is_invalid() {
+            eprintln!("[AC FFB] Could not open shared memory mapping (AC not running?)");
+            return None;
+        }
+        let view = MapViewOfFile(
             mapping,
             FILE_MAP_READ,
             0,
             0,
             mem::size_of::<SPageFilePhysics>(),
         );
-        if ptr.Value.is_null() {
-            return Err(anyhow!("Failed to map view of file"));
+        if view.Value.is_null() {
+            eprintln!("[AC FFB] Failed to map view of file");
+            if let Err(e) = CloseHandle(mapping) {
+                eprintln!("[AC FFB] CloseHandle failed: {e}");
+                return None;
+            }
+            return None;
         }
-        let physics: &SPageFilePhysics = &*(ptr.Value as *const SPageFilePhysics);
-        UnmapViewOfFile(ptr as _)?;
-        println!("Getting AC data (DEBUG)");
-        Ok(FFBData {
-            finalFF: physics.finalFF,
+
+        let physics_ptr = view.Value as *const SPageFilePhysics;
+        let physics = ptr::read_unaligned(physics_ptr);
+        if let Err(e) = UnmapViewOfFile(view as _) {
+            eprintln!("[AC FFB] UnmapViewOfFile failed: {e}");
+            return None;
+        }
+        if let Err(e) = CloseHandle(mapping) {
+            eprintln!("[AC FFB] CloseHandle failed: {e}");
+            return None;
+        }
+
+        Some(FFBData {
+            final_ff: physics.finalFF,
         })
     }
 }
