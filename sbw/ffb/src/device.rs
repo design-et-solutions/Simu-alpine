@@ -107,7 +107,6 @@ pub unsafe fn create_device(
 
 pub unsafe fn update_effect(effect: &IDirectInputEffect, magnitude: f32) -> Result<()> {
     unsafe {
-        println!("FFB effect update (DEBUG)");
         let scaled = (magnitude.clamp(-1.0, 1.0) * 10000.0) as i32;
 
         let mut constant_force = DICONSTANTFORCE { lMagnitude: scaled };
@@ -116,34 +115,30 @@ pub unsafe fn update_effect(effect: &IDirectInputEffect, magnitude: f32) -> Resu
             dwSize: std::mem::size_of::<DIEFFECT>() as u32,
             cbTypeSpecificParams: std::mem::size_of::<DICONSTANTFORCE>() as u32,
             lpvTypeSpecificParams: &mut constant_force as *mut _ as *mut std::ffi::c_void,
-            dwFlags: DIEFF_OBJECTOFFSETS | DIEFF_CARTESIAN,
-            // We only update parameters, not axes or direction
+            dwFlags: DIEFF_CARTESIAN,
             ..Default::default()
         };
 
-        // Update the effect’s type-specific parameters
         effect.SetParameters(&mut dieffect, DIEP_TYPESPECIFICPARAMS)?;
-        println!("FFB effect updated");
-
         Ok(())
     }
 }
 
-pub unsafe fn create_constant_force(device: &IDirectInputDevice8W) -> Result<IDirectInputEffect> {
+pub unsafe fn create_effect(device: &IDirectInputDevice8W) -> Result<IDirectInputEffect> {
     unsafe {
-        let mut axis = [0];
-        let mut direction = Box::new([1i32]);
-        let mut constant_force = Box::new(DICONSTANTFORCE { lMagnitude: 10000 });
+        let mut axes = [0];
+        let mut direction = Box::new([0i32]);
+        let mut constant_force = Box::new(DICONSTANTFORCE { lMagnitude: 0 });
 
         let mut effect = DIEFFECT {
             dwSize: std::mem::size_of::<DIEFFECT>() as DWORD,
             dwFlags: DIEFF_CARTESIAN | DIEFF_OBJECTOFFSETS,
             dwDuration: 0xFFFFFFFF,
-            dwGain: 5000,
+            dwGain: 10000,
             dwTriggerButton: DIEB_NOTRIGGER,
             dwTriggerRepeatInterval: 0,
             cAxes: 1,
-            rgdwAxes: axis.as_mut_ptr(),
+            rgdwAxes: axes.as_mut_ptr(),
             rglDirection: direction.as_mut_ptr(),
             lpEnvelope: std::ptr::null_mut(),
             cbTypeSpecificParams: std::mem::size_of::<DICONSTANTFORCE>() as DWORD,
@@ -156,74 +151,57 @@ pub unsafe fn create_constant_force(device: &IDirectInputDevice8W) -> Result<IDi
         let mut effect_ptr: Option<IDirectInputEffect> = None;
         device.CreateEffect(&GUID_ConstantForce, &mut effect, &mut effect_ptr, None)?;
         let effect = effect_ptr.ok_or_else(|| anyhow::anyhow!("Failed to create effect"))?;
+
         println!("Effect created successfully!");
         Ok(effect)
     }
 }
 
-pub unsafe fn create_spring(device: &IDirectInputDevice8W) -> Result<IDirectInputEffect> {
+pub unsafe fn read_axis_x(device: &IDirectInputDevice8W) -> Result<f32> {
     unsafe {
-        let mut axes = [0];
-        let mut direction = [0];
+        let mut state = DIJOYSTATE2::default();
+        let res = device.GetDeviceState(
+            std::mem::size_of::<DIJOYSTATE2>() as u32,
+            &mut state as *mut _ as *mut _,
+        );
 
-        // Spring parameters
-        let mut condition = DICONDITION {
-            lOffset: 0,                 // Neutral position (center)
-            lPositiveCoefficient: 5000, // Force towards center
-            lNegativeCoefficient: 5000,
-            dwPositiveSaturation: 10000,
-            dwNegativeSaturation: 10000,
-            lDeadBand: 0,
-        };
+        if res.is_err() {
+            // try re-acquire if needed
+            device.Acquire()?;
+            return Ok(0.0);
+        }
 
-        let mut effect = DIEFFECT {
-            dwSize: std::mem::size_of::<DIEFFECT>() as u32,
-            dwFlags: DIEFF_CARTESIAN | DIEFF_OBJECTOFFSETS,
-            cAxes: 1,
-            rgdwAxes: axes.as_mut_ptr(),
-            rglDirection: direction.as_mut_ptr(),
-            cbTypeSpecificParams: std::mem::size_of::<DICONDITION>() as u32,
-            lpvTypeSpecificParams: &mut condition as *mut _ as *mut _,
-            dwDuration: 0xFFFFFFFF,
-            dwGain: 10000,
-            ..Default::default()
-        };
+        // Normalize [-1.0, 1.0]
+        let normalized = (state.lX as f32 - 32768.0) / 32768.0;
+        let normalized = normalized.clamp(-1.0, 1.0);
 
-        let mut effect_ptr: Option<IDirectInputEffect> = None;
-        device.CreateEffect(&GUID_Spring, &mut effect, &mut effect_ptr, None)?;
-        Ok(effect_ptr.ok_or_else(|| anyhow::anyhow!("Failed to create spring effect"))?)
+        // Convert to degrees: [-450°, 450°]
+        let degrees = normalized * 450.0;
+
+        Ok(degrees)
     }
 }
 
-pub unsafe fn create_damper(device: &IDirectInputDevice8W) -> Result<IDirectInputEffect> {
+pub unsafe fn apply_centering_spring(effect: &IDirectInputEffect) -> Result<()> {
     unsafe {
-        let mut axes = [0];
-        let mut direction = [0];
-
         let mut condition = DICONDITION {
-            lOffset: 0,
-            lPositiveCoefficient: 3000, // Resistance
-            lNegativeCoefficient: 3000,
+            lOffset: 0, // zero at center
+            lPositiveCoefficient: 10000,
+            lNegativeCoefficient: 10000,
+            lDeadBand: 0,
             dwPositiveSaturation: 10000,
             dwNegativeSaturation: 10000,
-            lDeadBand: 0,
         };
 
-        let mut effect = DIEFFECT {
+        let mut dieffect = DIEFFECT {
             dwSize: std::mem::size_of::<DIEFFECT>() as u32,
-            dwFlags: DIEFF_CARTESIAN | DIEFF_OBJECTOFFSETS,
-            cAxes: 1,
-            rgdwAxes: axes.as_mut_ptr(),
-            rglDirection: direction.as_mut_ptr(),
-            cbTypeSpecificParams: std::mem::size_of::<DICONDITION>() as u32,
+            cbTypeSpecificParams: std::mem::size_of::<DICONSTANTFORCE>() as u32,
             lpvTypeSpecificParams: &mut condition as *mut _ as *mut _,
-            dwDuration: 0xFFFFFFFF,
-            dwGain: 10000,
+            dwFlags: DIEFF_CARTESIAN,
             ..Default::default()
         };
 
-        let mut effect_ptr: Option<IDirectInputEffect> = None;
-        device.CreateEffect(&GUID_Damper, &mut effect, &mut effect_ptr, None)?;
-        Ok(effect_ptr.ok_or_else(|| anyhow::anyhow!("Failed to create damper effect"))?)
+        effect.SetParameters(&mut dieffect, DIEP_TYPESPECIFICPARAMS)?;
     }
+    Ok(())
 }

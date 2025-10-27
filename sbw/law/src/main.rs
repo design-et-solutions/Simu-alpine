@@ -23,18 +23,17 @@ struct FFBData {
 
 #[derive(Debug)]
 pub struct SteeringTable {
-    pub values: [[f32; 14]; 13],
+    pub wheel_angles: [[f32; 14]; 13],
     pub key_steer_angle: [i32; 13],
     pub key_speed: [i32; 14],
     pub max_wheel_angle: f32,
-    pub ackermann_angle: f32,
-    pub speed_linear_end: f32,
-    pub demul_min: f32,
-    pub demul_max: f32,
+    pub scalling_factor: f32,
 }
 
 impl SteeringTable {
     pub fn new() -> Self {
+        let max_physical_steer = 45.0; // your wheel ±45°
+        let old_max_steer = 210.0; // original table max steer
         let key_steer_angle = [0, 10, 15, 20, 25, 30, 40, 50, 70, 90, 120, 160, 210];
         let key_speed = [0, 5, 30, 50, 60, 70, 90, 110, 130, 160, 200, 250, 300, 350];
 
@@ -91,20 +90,17 @@ impl SteeringTable {
         ];
 
         Self {
-            values,
+            wheel_angles: values,
             key_steer_angle,
             key_speed,
-            max_wheel_angle: 32.3076923, // angle max roue
-            ackermann_angle: 15.0,       // angle Ackermann de base
-            speed_linear_end: 130.0,     // km/h où la linéarité s'arrête
-            demul_min: 6.0,              // démultiplication mini (angle volant / angle roue)
-            demul_max: 12.0,             // démultiplication maxi
+            max_wheel_angle: 32.3076923,
+            scalling_factor: old_max_steer / max_physical_steer,
         }
     }
 
     pub fn get_wheel_angle(&self, speed: f32, steer_angle: f32) -> f32 {
         let sign = steer_angle.signum(); // Save the original sign
-        let steer_abs = steer_angle.abs(); // Use absolute value for table lookup
+        let steer_abs = steer_angle.abs() * self.scalling_factor; // Use absolute value for table lookup
 
         // Find closest speed indices in the key table
         let s_idx = match self
@@ -114,6 +110,15 @@ impl SteeringTable {
             Ok(i) => i,
             Err(i) => i.saturating_sub(1),
         };
+        let s_next = (s_idx + 1).min(self.key_speed.len() - 1);
+        let speed0 = self.key_speed[s_idx] as f32;
+        let speed1 = self.key_speed[s_next] as f32;
+        let t_speed = if speed1 - speed0 == 0.0 {
+            0.0
+        } else {
+            (speed - speed0) / (speed1 - speed0)
+        };
+
         // Find closest steer angle indices
         let a_idx = match self
             .key_steer_angle
@@ -122,24 +127,26 @@ impl SteeringTable {
             Ok(i) => i,
             Err(i) => i.saturating_sub(1),
         };
+        let a_next = (a_idx + 1).min(self.key_steer_angle.len() - 1);
+        let steer0 = self.key_steer_angle[a_idx] as f32;
+        let steer1 = self.key_steer_angle[a_next] as f32;
+        let t_steer = if steer1 - steer0 == 0.0 {
+            0.0
+        } else {
+            (steer_abs - steer0) / (steer1 - steer0)
+        };
 
-        let wheel_angle = self.values[a_idx][s_idx];
+        // Bilinear interpolation
+        let v00 = self.wheel_angles[a_idx][s_idx];
+        let v10 = self.wheel_angles[a_next][s_idx];
+        let v01 = self.wheel_angles[a_idx][s_next];
+        let v11 = self.wheel_angles[a_next][s_next];
+
+        let interp_steer0 = v00 * (1.0 - t_steer) + v10 * t_steer;
+        let interp_steer1 = v01 * (1.0 - t_steer) + v11 * t_steer;
+        let wheel_angle = interp_steer0 * (1.0 - t_speed) + interp_steer1 * t_speed;
 
         wheel_angle * sign
-    }
-
-    fn demul_volant(&self, speed: f32, wheel_angle: f32) -> f32 {
-        let linear_ratio = 2.0 * self.ackermann_angle / wheel_angle.abs(); // ratio à basse vitesse
-        let linear_ratio = linear_ratio.clamp(self.demul_min, self.demul_max);
-
-        if speed <= self.speed_linear_end {
-            linear_ratio
-        } else {
-            // interpolation linéaire entre max ratio et min ratio
-            let t =
-                ((speed - self.speed_linear_end) / (350.0 - self.speed_linear_end)).clamp(0.0, 1.0);
-            self.demul_max * (1.0 - t) + self.demul_min * t
-        }
     }
 }
 
@@ -164,19 +171,21 @@ fn main() -> Result<()> {
             let t = start.elapsed().as_secs_f32();
             let speed = 60.0 + (t * 0.5).sin() * 60.0;
             let steer_angle = read_axis_x(&device)?;
+
             let wheel_angle = table.get_wheel_angle(speed, steer_angle);
-            let ratio = table.demul_volant(speed, wheel_angle);
-            let steer_volant = wheel_angle * ratio;
-            let normalized_steer_volant = steer_volant / (table.max_wheel_angle * table.demul_max);
-            let vjoy_value = float_to_vjoy_axis(normalized_steer_volant);
+
+            // Normalize the *target wheel angle* for vJoy
+            let normalized = (wheel_angle / table.max_wheel_angle).clamp(-1.0, 1.0);
+
+            let vjoy_value = float_to_vjoy_axis(normalized);
             let result = vjoy.SetAxis(vjoy_value as i32, device_id as u32, HID_USAGE_X);
             if result == 0 {
                 eprintln!("Failed to set vJoy axis");
             }
             print!("\x1B[2J\x1B[1;1H"); // ANSI escape: clear screen + move cursor to top-left
             println!(
-                "\rCar Speed: {:6.1} km/h | Steer Angle: {:6.1}° | Normalized Steer Angle: {:6.1}° | Target Wheel Angle: {:6.1}° | vJoy value: {:5}",
-                speed, steer_angle, normalized_steer_volant, wheel_angle, vjoy_value,
+                "\rCar Speed: {:6.1} km/h | Steer Angle: {:6.1}° | Target Wheel Angle: {:6.1}° | vJoy value: {:5}",
+                speed, steer_angle, wheel_angle, normalized,
             );
             std::io::stdout().flush().unwrap();
             std::thread::sleep(std::time::Duration::from_millis(20));
