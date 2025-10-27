@@ -36,7 +36,7 @@
                 --product "simu" \
                 --code "DS25-SIMU-FF01"
 
-              echo ${pkgs.pkgsCross.mingwW64.buildPackages.gcc}
+              export LIBCLANG_PATH=${pkgs.libclang.lib}/lib
             '';
 
           };
