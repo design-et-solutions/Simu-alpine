@@ -94,7 +94,7 @@ pub unsafe fn create_device(
             }
         };
         println!("Device has been found");
-        device.SetCooperativeLevel(hwnd, DISCL_EXCLUSIVE | DISCL_FOREGROUND)?;
+        device.SetCooperativeLevel(hwnd, DISCL_NONEXCLUSIVE | DISCL_FOREGROUND)?;
         unsafe extern "C" {
             static c_dfDIJoystick2: DIDATAFORMAT;
         }
@@ -123,8 +123,7 @@ pub unsafe fn read_axis_x(device: &IDirectInputDevice8W) -> Result<f32> {
         let normalized = (state.lX as f32 - 32768.0) / 32768.0;
         let normalized = normalized.clamp(-1.0, 1.0);
 
-        // Convert to degrees: [-450°, 450°]
-        let degrees = normalized * 450.0;
+        let degrees = normalized * 270.0;
 
         Ok(degrees)
     }

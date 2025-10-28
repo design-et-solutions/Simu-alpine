@@ -2,6 +2,7 @@ use ac::*;
 use anyhow::Result;
 use device::*;
 use rand::Rng;
+use std::io::Write;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use window::*;
@@ -34,28 +35,22 @@ fn main() -> Result<()> {
         apply_centering_spring(&effect)?;
         effect.Start(1, 0)?;
         println!("FFB effect running...");
-        loop_ac(&device, &effect)?;
-        println!("FFB effect stopping...");
-        Ok(())
-    }
-}
-
-unsafe fn loop_ac(device: &IDirectInputDevice8W, effect: &IDirectInputEffect) -> Result<()> {
-    loop {
-        match read_ac_data() {
-            Some(data) => unsafe {
-                if let Err(err) = update_effect(effect, data.final_ff) {
-                    println!("Update FFB failed: {:?}", err);
+        loop {
+            match read_ac_data() {
+                Some(data) => {
+                    if let Err(err) = update_effect(&effect, data.final_ff) {
+                        print!("\x1B[2J\x1B[1;1H"); // ANSI escape: clear screen + move cursor to top-left
+                        println!("Update FFB failed: {:?}", err);
+                        std::io::stdout().flush().unwrap();
+                    }
                 }
-            },
-            None => {
-                unsafe {
-                    let steer_angle = read_axis_x(device)?;
-                    println!("Steer angle: {}", steer_angle);
+                None => {
+                    print!("\x1B[2J\x1B[1;1H");
+                    println!("Read AC data failed");
+                    std::io::stdout().flush().unwrap();
                 }
-                println!("Read AC data failed");
             }
+            std::thread::sleep(Duration::from_millis(1));
         }
-        std::thread::sleep(Duration::from_micros(3000));
     }
 }

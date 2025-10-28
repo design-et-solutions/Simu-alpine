@@ -166,29 +166,30 @@ fn main() -> Result<()> {
         let (_name, instance) = found_device(&di)?;
         let device = create_device(&di, instance, hwnd)?;
 
-        let start = Instant::now();
+        // let start = Instant::now();
         loop {
-            let t = start.elapsed().as_secs_f32();
-            let speed = 60.0 + (t * 0.5).sin() * 60.0;
-            let steer_angle = read_axis_x(&device)?;
+            if let Some(data) = read_ac_data() {
+                let speed = data.speed_kmh;
+                let steer_angle = read_axis_x(&device)?;
 
-            let wheel_angle = table.get_wheel_angle(speed, steer_angle);
+                let wheel_angle = table.get_wheel_angle(speed, steer_angle);
 
-            // Normalize the *target wheel angle* for vJoy
-            let normalized = (wheel_angle / table.max_wheel_angle).clamp(-1.0, 1.0);
+                // Normalize the *target wheel angle* for vJoy
+                let normalized = (wheel_angle / table.max_wheel_angle).clamp(-1.0, 1.0);
 
-            let vjoy_value = float_to_vjoy_axis(normalized);
-            let result = vjoy.SetAxis(vjoy_value as i32, device_id as u32, HID_USAGE_X);
-            if result == 0 {
-                eprintln!("Failed to set vJoy axis");
+                let vjoy_value = float_to_vjoy_axis(normalized);
+                let result = vjoy.SetAxis(vjoy_value as i32, device_id as u32, HID_USAGE_X);
+                print!("\x1B[2J\x1B[1;1H"); // ANSI escape: clear screen + move cursor to top-left
+                if result == 0 {
+                    eprintln!("Failed to set vJoy axis");
+                }
+                println!(
+                    "\rCar Speed: {:6.1} km/h | Steer Angle: {:6.1}° | Target Wheel Angle: {:6.1}° | vJoy value: {:5}",
+                    speed, steer_angle, wheel_angle, normalized,
+                );
+                std::io::stdout().flush().unwrap();
             }
-            print!("\x1B[2J\x1B[1;1H"); // ANSI escape: clear screen + move cursor to top-left
-            println!(
-                "\rCar Speed: {:6.1} km/h | Steer Angle: {:6.1}° | Target Wheel Angle: {:6.1}° | vJoy value: {:5}",
-                speed, steer_angle, wheel_angle, normalized,
-            );
-            std::io::stdout().flush().unwrap();
-            std::thread::sleep(std::time::Duration::from_millis(20));
+            std::thread::sleep(std::time::Duration::from_millis(3));
         }
     }
 }
@@ -197,17 +198,3 @@ unsafe fn float_to_vjoy_axis(value: f32) -> u32 {
     let clamped = value.clamp(-1.0, 1.0);
     ((clamped + 1.0) / 2.0 * 32768 as f32) as u32
 }
-
-// unsafe fn loop_ac() -> Result<()> {
-//     loop {
-//         match read_ac_data() {
-//             Some(data) => {
-//                 println!("Current data: {:?}", data);
-//             }
-//             None => {
-//                 println!("Read AC data failed");
-//             }
-//         }
-//         std::thread::sleep(Duration::from_millis(20));
-//     }
-// }
