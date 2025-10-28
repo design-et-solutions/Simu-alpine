@@ -1,8 +1,10 @@
 use ac::*;
 use anyhow::Result;
 use device::*;
+use dotenvy::dotenv;
 use rand::Rng;
 use std::collections::{BTreeMap, HashMap};
+use std::env;
 use std::io::Write;
 use std::path::Path;
 use std::sync::Mutex;
@@ -31,7 +33,7 @@ pub struct SteeringTable {
 }
 
 impl SteeringTable {
-    pub fn new() -> Self {
+    pub fn new(factor: f32) -> Self {
         let max_physical_steer = 45.0; // your wheel ±45°
         let old_max_steer = 210.0; // original table max steer
         let key_steer_angle = [0, 10, 15, 20, 25, 30, 40, 50, 70, 90, 120, 160, 210];
@@ -94,7 +96,7 @@ impl SteeringTable {
             key_steer_angle,
             key_speed,
             max_wheel_angle: 32.3076923,
-            scalling_factor: old_max_steer / max_physical_steer,
+            scalling_factor: (old_max_steer / max_physical_steer) * factor,
         }
     }
 
@@ -154,7 +156,12 @@ type DWORD = u32;
 const HID_USAGE_X: u32 = 0x30;
 
 fn main() -> Result<()> {
-    let table = SteeringTable::new();
+    dotenv().ok();
+    let factor: f32 = env::var("FACTOR")
+        .unwrap_or("1.0".to_string())
+        .parse::<f32>()
+        .unwrap_or(1.0);
+    let table = SteeringTable::new(factor);
     unsafe {
         let vjoy = vJoyInterface::new(Path::new(r"C:\Program Files\vJoy\x64\vJoyInterface.dll"))?;
         let device_id = 1;
@@ -171,7 +178,6 @@ fn main() -> Result<()> {
             if let Some(data) = read_ac_data() {
                 let speed = data.speed_kmh;
                 let steer_angle = read_axis_x(&device)?;
-
                 let wheel_angle = table.get_wheel_angle(speed, steer_angle);
 
                 // Normalize the *target wheel angle* for vJoy
@@ -184,8 +190,8 @@ fn main() -> Result<()> {
                     eprintln!("Failed to set vJoy axis");
                 }
                 println!(
-                    "\rCar Speed: {:6.1} km/h | Steer Angle: {:6.1}° | Target Wheel Angle: {:6.1}° | vJoy value: {:5}",
-                    speed, steer_angle, wheel_angle, normalized,
+                    "\rCar Speed: {:6.1} km/h | Steer Angle: {:4.1}° | Target Wheel Angle: {:4.1}° | vJoy value: {:2.3} | factor: {:3.5}",
+                    speed, steer_angle, wheel_angle, normalized, factor,
                 );
                 std::io::stdout().flush().unwrap();
             }
