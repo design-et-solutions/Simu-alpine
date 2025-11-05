@@ -31,23 +31,23 @@ fn main() -> Result<()> {
     unsafe {
         loop {
             let result = std::panic::catch_unwind(|| {
-                let hwnd = match create_window("Design & Solutions: FFB", "WindowClass") {
-                    Ok(h) => h,
-                    Err(e) => {
-                        eprintln!("Failed to create window: {:?}", e);
-                        return;
-                    }
-                };
-
-                let di = match initialize_dirent_input() {
-                    Ok(d) => d,
-                    Err(e) => {
-                        eprintln!("Failed to initialize DirectInput: {:?}", e);
-                        return;
-                    }
-                };
-
                 loop {
+                    let hwnd = match create_window("Design & Solutions: FFB", "WindowClass") {
+                        Ok(h) => h,
+                        Err(e) => {
+                            eprintln!("Failed to create window: {:?}", e);
+                            return;
+                        }
+                    };
+
+                    let di = match initialize_dirent_input() {
+                        Ok(d) => d,
+                        Err(e) => {
+                            eprintln!("Failed to initialize DirectInput: {:?}", e);
+                            return;
+                        }
+                    };
+
                     let (_name, instance) = match found_device(&di) {
                         Ok(v) => v,
                         Err(e) => {
