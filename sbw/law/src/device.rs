@@ -105,7 +105,7 @@ pub unsafe fn create_device(
     }
 }
 
-pub unsafe fn read_axis_x(device: &IDirectInputDevice8W) -> Result<f32> {
+pub unsafe fn read_axis_x(device: &IDirectInputDevice8W, angle: f32) -> Result<f32> {
     unsafe {
         let mut state = DIJOYSTATE2::default();
         let res = device.GetDeviceState(
@@ -123,7 +123,7 @@ pub unsafe fn read_axis_x(device: &IDirectInputDevice8W) -> Result<f32> {
         let normalized = (state.lX as f32 - 32768.0) / 32768.0;
         let normalized = normalized.clamp(-1.0, 1.0);
 
-        let degrees = normalized * 270.0;
+        let degrees = normalized * angle;
 
         Ok(degrees)
     }

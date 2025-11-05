@@ -12,6 +12,7 @@ use std::time::{Duration, Instant};
 use vjoy_sys::*;
 use window::*;
 use windows::Win32::Devices::HumanInterfaceDevice::{HID_USAGE_GENERIC_X, IDirectInputEffect};
+use windows::Win32::Devices::HumanInterfaceDevice::{IDirectInput8W, IDirectInputDevice8W};
 
 mod ac;
 mod device;
@@ -33,8 +34,8 @@ pub struct SteeringTable {
 }
 
 impl SteeringTable {
-    pub fn new(factor: f32) -> Self {
-        let max_physical_steer = 45.0; // your wheel ±45°
+    pub fn new(factor: f32, angle: f32) -> Self {
+        let max_physical_steer = angle; // your wheel ±45°
         let old_max_steer = 210.0; // original table max steer
         let key_steer_angle = [0, 10, 15, 20, 25, 30, 40, 50, 70, 90, 120, 160, 210];
         let key_speed = [0, 5, 30, 50, 60, 70, 90, 110, 130, 160, 200, 250, 300, 350];
@@ -156,47 +157,128 @@ type DWORD = u32;
 const HID_USAGE_X: u32 = 0x30;
 
 fn main() -> Result<()> {
-    dotenv().ok();
-    let factor: f32 = env::var("FACTOR")
-        .unwrap_or("1.0".to_string())
-        .parse::<f32>()
-        .unwrap_or(1.0);
-    let table = SteeringTable::new(factor);
-    unsafe {
-        let vjoy = vJoyInterface::new(Path::new(r"C:\Program Files\vJoy\x64\vJoyInterface.dll"))?;
-        let device_id = 1;
-        if vjoy.AcquireVJD(device_id) == 0 {
-            panic!("Failed to acquire vJoy device {}", device_id);
-        }
-        let hwnd = create_window("Design & Solutions: Law", "WindowClass")?;
-        let di = initialize_dirent_input()?;
-        let (_name, instance) = found_device(&di)?;
-        let device = create_device(&di, instance, hwnd)?;
+    loop {
+        // Wrap everything in a catch_unwind to recover from panics
+        let result = std::panic::catch_unwind(|| {
+            dotenv().ok();
+            let factor: f32 = std::env::var("FACTOR")
+                .unwrap_or_else(|_| "1.0".to_string())
+                .parse()
+                .unwrap_or(1.0);
+            let steer_total_angle: f32 = std::env::var("STEER_TOTAL_ANGLE")
+                .unwrap_or_else(|_| "900.0".to_string())
+                .parse()
+                .unwrap_or(900.0);
+            let steer_limit_angle: f32 = std::env::var("STEER_LIMIT_ANGLE")
+                .unwrap_or_else(|_| "210.0".to_string())
+                .parse()
+                .unwrap_or(210.0);
+            let table = SteeringTable::new(factor, steer_limit_angle);
 
-        // let start = Instant::now();
-        loop {
-            if let Some(data) = read_ac_data() {
-                let speed = data.speed_kmh;
-                let steer_angle = read_axis_x(&device)?;
-                let wheel_angle = table.get_wheel_angle(speed, steer_angle);
-
-                // Normalize the *target wheel angle* for vJoy
-                let normalized = (wheel_angle / table.max_wheel_angle).clamp(-1.0, 1.0);
-
-                let vjoy_value = float_to_vjoy_axis(normalized);
-                let result = vjoy.SetAxis(vjoy_value as i32, device_id as u32, HID_USAGE_X);
-                print!("\x1B[2J\x1B[1;1H"); // ANSI escape: clear screen + move cursor to top-left
-                if result == 0 {
-                    eprintln!("Failed to set vJoy axis");
+            unsafe {
+                let vjoy = match vJoyInterface::new(Path::new(
+                    r"C:\Program Files\vJoy\x64\vJoyInterface.dll",
+                )) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        eprintln!("vJoy init failed: {:?}", e);
+                        return;
+                    }
+                };
+                let device_id = 1;
+                if vjoy.AcquireVJD(device_id) == 0 {
+                    eprintln!("Failed to acquire vJoy device {}", device_id);
+                    return;
                 }
-                println!(
-                    "\rCar Speed: {:6.1} km/h | Steer Angle: {:4.1}° | Target Wheel Angle: {:4.1}° | vJoy value: {:2.3} | factor: {:3.5}",
-                    speed, steer_angle, wheel_angle, normalized, factor,
-                );
-                std::io::stdout().flush().unwrap();
+
+                let hwnd = match create_window("Design & Solutions: Law", "WindowClass") {
+                    Ok(h) => h,
+                    Err(e) => {
+                        eprintln!("Window creation failed: {:?}", e);
+                        return;
+                    }
+                };
+                let di = match initialize_dirent_input() {
+                    Ok(d) => d,
+                    Err(e) => {
+                        eprintln!("DirectInput init failed: {:?}", e);
+                        return;
+                    }
+                };
+
+                loop {
+                    let (_name, instance) = match found_device(&di) {
+                        Ok(v) => v,
+                        Err(e) => {
+                            eprintln!("Device not found: {:?}", e);
+                            std::thread::sleep(Duration::from_secs(1));
+                            continue;
+                        }
+                    };
+                    let mut device = match create_device(&di, instance, hwnd) {
+                        Ok(d) => d,
+                        Err(e) => {
+                            eprintln!("Failed to create device: {:?}", e);
+                            std::thread::sleep(Duration::from_secs(1));
+                            continue;
+                        }
+                    };
+
+                    'effect_loop: loop {
+                        match read_ac_data() {
+                            Some(data) => {
+                                if device.Acquire().is_err() {
+                                    eprintln!("Wheel disconnected, restarting...");
+                                    break 'effect_loop;
+                                }
+
+                                let speed = data.speed_kmh;
+                                let steer_angle = match read_axis_x(&device, steer_total_angle) {
+                                    Ok(a) => a,
+                                    Err(_) => continue,
+                                };
+                                let wheel_angle = table.get_wheel_angle(speed, steer_angle);
+
+                                let normalized =
+                                    (wheel_angle / table.max_wheel_angle).clamp(-1.0, 1.0);
+                                let vjoy_value = float_to_vjoy_axis(normalized);
+
+                                if vjoy.SetAxis(vjoy_value as i32, device_id as u32, HID_USAGE_X)
+                                    == 0
+                                {
+                                    eprintln!("Failed to set vJoy axis");
+                                }
+
+                                print!("\x1B[2J\x1B[1;1H");
+                                println!(
+                                    "\rCar Speed: {:3.0} km/h | Steer Angle: {:3.1}° | Target Wheel Angle: {:3.1}° | vJoy value: {:1.2}",
+                                    speed, steer_angle, wheel_angle, normalized,
+                                );
+                            }
+                            None => {
+                                print!("\x1B[2J\x1B[1;1H");
+                                println!("Read AC data failed, retrying...");
+                                std::thread::sleep(Duration::from_millis(500));
+                            }
+                        }
+                        std::thread::sleep(Duration::from_millis(3));
+                        std::io::stdout().flush().unwrap();
+                    }
+
+                    println!("Restarting LAW setup...");
+                    std::thread::sleep(Duration::from_secs(5));
+                    std::io::stdout().flush().unwrap();
+                }
             }
-            std::thread::sleep(std::time::Duration::from_millis(3));
+        });
+
+        if result.is_err() {
+            eprintln!("Unexpected panic occurred, restarting main loop...");
         }
+
+        println!("Restarting LAW all...");
+        std::thread::sleep(Duration::from_secs(5));
+        std::io::stdout().flush().unwrap();
     }
 }
 
