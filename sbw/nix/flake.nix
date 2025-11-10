@@ -23,11 +23,13 @@
           pkgs.pkgsCross.mingwW64.windows.pthreads
           zip
         ];
+        pythonEnv =
+          pkgs.python313.withPackages (ps: with ps; [ ps.matplotlib ]);
       in {
         devShells = {
           default = pkgs.mkShell {
             nativeBuildInputs = commonNativeBuildInputs;
-            buildInputs = [ rust ] ++ commonBuildInputs;
+            buildInputs = [ rust pythonEnv ] ++ commonBuildInputs;
             shellHook = ''
               ${project-banner.packages.${system}.default}/bin/project-banner \
                 --owner "design & solutions" \
