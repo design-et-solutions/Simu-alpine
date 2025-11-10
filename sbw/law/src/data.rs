@@ -79,14 +79,14 @@ pub fn draw_steering_table(
     root.fill(&WHITE)?;
 
     let x_max = table.key_speed.last().copied().unwrap_or(350);
-    let y_max = table.max_wheel_angle;
+    let y_max = table.max_wheel_angle * table.scalling_factor;
 
     let mut chart = ChartBuilder::on(&root)
         .caption("TBD", ("sans-serif", 30))
         .margin(10)
         .x_label_area_size(40)
         .y_label_area_size(40)
-        .build_cartesian_2d(0f32..x_max as f32, 0f32..y_max as f32)?;
+        .build_cartesian_2d(0f32..x_max as f32, 0f32..y_max)?;
 
     chart
         .configure_mesh()
@@ -103,7 +103,10 @@ pub fn draw_steering_table(
 
         chart
             .draw_series(LineSeries::new(series, &Palette99::pick(i)))?
-            .label(format!("Steer {}°", table.key_steer_angle[i]))
+            .label(format!(
+                "Steer {}°",
+                table.key_steer_angle[i] as f32 * table.scalling_factor
+            ))
             .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &Palette99::pick(i)));
     }
 
