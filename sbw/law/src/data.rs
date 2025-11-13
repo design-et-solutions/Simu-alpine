@@ -1,5 +1,4 @@
 use crate::SteeringTable;
-use image::{Rgb, RgbImage};
 
 pub fn get_data_a424(factor: f32, angle: f32) -> SteeringTable {
     let values = [
@@ -68,18 +67,155 @@ pub fn get_data_a424(factor: f32, angle: f32) -> SteeringTable {
     }
 }
 
+pub fn get_data_a480(factor: f32, angle: f32) -> SteeringTable {
+    let values = [
+        [0.0; 14],
+        [
+            1.05263158, 1.05263158, 1.05263158, 1.05263158, 1.05263158, 1.05263158, 1.02766798,
+            0.94202899, 0.86956522, 0.77961019, 0.68511199, 0.64516129, 0.64516129, 0.64516129,
+        ],
+        [
+            2.10526316, 2.10526316, 2.10526316, 2.10526316, 2.10526316, 2.10526316, 2.05533597,
+            1.88405797, 1.73913043, 1.55922039, 1.37022398, 1.29032258, 1.29032258, 1.29032258,
+        ],
+        [
+            3.15789474, 3.15789474, 3.15789474, 3.15789474, 3.15789474, 3.15789474, 3.08300395,
+            2.82608696, 2.60869565, 2.33883058, 2.05533597, 1.93548387, 1.93548387, 1.93548387,
+        ],
+        [
+            4.21052632, 4.21052632, 4.21052632, 4.21052632, 4.21052632, 4.21052632, 4.11067194,
+            3.76811594, 3.47826087, 3.11844078, 2.74044796, 2.58064516, 2.58064516, 2.58064516,
+        ],
+        [
+            5.26315789, 5.26315789, 5.26315789, 5.26315789, 5.26315789, 5.26315789, 5.13833992,
+            4.71014493, 4.34782609, 3.89805097, 3.42555995, 2.58064516, 2.58064516, 2.58064516,
+        ],
+        [
+            6.31578947, 6.31578947, 6.31578947, 6.31578947, 6.31578947, 6.31578947, 6.16600791,
+            5.65217391, 5.2173913, 3.89805097, 3.42555995, 2.58064516, 2.58064516, 2.58064516,
+        ],
+        [
+            7.36842105, 7.36842105, 7.36842105, 7.36842105, 7.36842105, 7.36842105, 7.19367589,
+            6.5942029, 6.08695652, 3.89805097, 3.42555995, 2.58064516, 2.58064516, 2.58064516,
+        ],
+        [
+            8.42105263, 8.42105263, 8.42105263, 8.42105263, 8.42105263, 8.42105263, 8.22134387,
+            7.53623188, 6.08695652, 3.89805097, 3.42555995, 2.58064516, 2.58064516, 2.58064516,
+        ],
+        [
+            9.47368421, 9.47368421, 9.47368421, 9.47368421, 9.47368421, 9.47368421, 9.24901186,
+            8.47826087, 6.08695652, 3.89805097, 3.42555995, 2.58064516, 2.58064516, 2.58064516,
+        ],
+        [
+            10.5263158, 10.5263158, 10.5263158, 10.5263158, 10.5263158, 10.5263158, 10.2766798,
+            8.47826087, 6.08695652, 3.89805097, 3.42555995, 2.58064516, 2.58064516, 2.58064516,
+        ],
+        [
+            11.5789474, 11.5789474, 11.5789474, 11.5789474, 11.5789474, 11.5789474, 11.3043478,
+            8.47826087, 6.08695652, 3.89805097, 3.42555995, 2.58064516, 2.58064516, 2.58064516,
+        ],
+        [
+            15.7894737, 15.7894737, 15.7894737, 15.7894737, 15.7894737, 15.7894737, 11.3043478,
+            8.47826087, 6.08695652, 3.89805097, 3.42555995, 2.58064516, 2.58064516, 2.58064516,
+        ],
+    ];
+    let key_steer_angle = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 150];
+    let key_speed = [0, 30, 40, 50, 60, 70, 90, 110, 130, 160, 200, 250, 300, 350];
+
+    let old_max_steer = 150.0; // original table max steer
+    let max_physical_steer = angle; // your wheel ±45°
+
+    SteeringTable {
+        wheel_angles: values,
+        key_steer_angle,
+        key_speed,
+        max_wheel_angle: 15.7894737,
+        scalling_factor: (old_max_steer / max_physical_steer) * factor,
+    }
+}
+
+pub fn get_data_laferrari(factor: f32, angle: f32) -> SteeringTable {
+    let values = [
+        [0.0; 14],
+        [
+            1.33333333, 1.33333333, 1.2745098, 1.2037037, 1.14035088, 1.08333333, 0.98484848,
+            0.90277778, 0.83333333, 0.74712644, 0.65656566, 0.64516129, 0.64516129, 0.64516129,
+        ],
+        [
+            2.66666667, 2.66666667, 2.54901961, 2.40740741, 2.28070175, 2.16666667, 1.96969697,
+            1.80555556, 1.66666667, 1.49425287, 1.31313131, 1.29032258, 1.29032258, 1.29032258,
+        ],
+        [
+            4.0, 4.0, 3.82352941, 3.61111111, 3.42105263, 3.25, 2.95454545, 2.70833333, 2.5,
+            2.24137931, 1.96969697, 1.93548387, 1.93548387, 1.93548387,
+        ],
+        [
+            5.33333333, 5.33333333, 5.09803922, 4.81481481, 4.56140351, 4.33333333, 3.93939394,
+            3.61111111, 3.33333333, 2.98850575, 2.62626263, 2.58064516, 2.58064516, 2.58064516,
+        ],
+        [
+            6.66666667, 6.66666667, 6.37254902, 6.01851852, 5.70175439, 5.41666667, 4.92424242,
+            4.51388889, 4.16666667, 3.73563218, 2.62626263, 2.58064516, 2.58064516, 2.58064516,
+        ],
+        [
+            8.0, 8.0, 7.64705882, 7.22222222, 6.84210526, 6.5, 5.90909091, 5.41666667, 5.0,
+            3.73563218, 2.62626263, 2.58064516, 2.58064516, 2.58064516,
+        ],
+        [
+            10.0, 10.0, 9.55882353, 9.02777778, 8.55263158, 8.125, 7.38636364, 6.77083333, 5.0,
+            3.73563218, 2.62626263, 2.58064516, 2.58064516, 2.58064516,
+        ],
+        [
+            12.0, 12.0, 11.4705882, 10.8333333, 10.2631579, 9.75, 8.86363636, 6.77083333, 5.0,
+            3.73563218, 2.62626263, 2.58064516, 2.58064516, 2.58064516,
+        ],
+        [
+            14.6666667, 14.6666667, 14.0196078, 13.2407407, 12.5438596, 11.9166667, 8.86363636,
+            6.77083333, 5.0, 3.73563218, 2.62626263, 2.58064516, 2.58064516, 2.58064516,
+        ],
+        [
+            17.3333333, 17.3333333, 16.5686275, 15.6481481, 14.8245614, 11.9166667, 8.86363636,
+            6.77083333, 5.0, 3.73563218, 2.62626263, 2.58064516, 2.58064516, 2.58064516,
+        ],
+        [
+            20.0, 20.0, 19.1176471, 18.0555556, 14.8245614, 11.9166667, 8.86363636, 6.77083333,
+            5.0, 3.73563218, 2.62626263, 2.58064516, 2.58064516, 2.58064516,
+        ],
+        [
+            28.0, 28.0, 19.1176471, 18.0555556, 14.8245614, 11.9166667, 8.86363636, 6.77083333,
+            5.0, 3.73563218, 2.62626263, 2.58064516, 2.58064516, 2.58064516,
+        ],
+    ];
+    let key_steer_angle = [0, 10, 20, 30, 40, 50, 60, 75, 90, 110, 130, 160, 210];
+    let key_speed = [0, 30, 40, 50, 60, 70, 90, 110, 130, 160, 200, 250, 300, 350];
+
+    let old_max_steer = 210.0; // original table max steer
+    let max_physical_steer = angle; // your wheel ±45°
+
+    SteeringTable {
+        wheel_angles: values,
+        key_steer_angle,
+        key_speed,
+        max_wheel_angle: 28.0,
+        scalling_factor: (old_max_steer / max_physical_steer) * factor,
+    }
+}
+
 use plotters::prelude::*;
 
 pub fn draw_steering_table(
     table: &SteeringTable,
-    plots: Vec<Vec<f32>>, // wheel result
+    // plots: Vec<Vec<f32>>, // wheel result
     path: &str,
 ) -> anyhow::Result<()> {
-    let root = BitMapBackend::new(path, (1200, 800)).into_drawing_area();
+    let path_steer = format!("{}_by_steer.png", path);
+    let path_speed = format!("{}_by_speed.png", path);
+
+    let root = BitMapBackend::new(&path_steer, (1200, 800)).into_drawing_area();
     root.fill(&WHITE)?;
 
-    let x_max = table.key_speed.last().copied().unwrap_or(350);
-    let y_max = table.max_wheel_angle * table.scalling_factor;
+    let x_max = table.key_speed.last().copied().unwrap();
+    let y_max = table.max_wheel_angle;
 
     let mut chart = ChartBuilder::on(&root)
         .caption("TBD", ("sans-serif", 30))
@@ -94,6 +230,16 @@ pub fn draw_steering_table(
         .y_desc("Wheel Angle (°)")
         .draw()?;
 
+    let mut plots: Vec<Vec<f32>> = Vec::new();
+    for steer_angle in table.key_steer_angle {
+        let mut plot: Vec<f32> = Vec::new();
+        for speed in table.key_speed {
+            let wheel_angle = table.get_wheel_angle(speed as f32, steer_angle as f32);
+            plot.push(wheel_angle);
+        }
+        plots.push(plot);
+    }
+
     for (i, row) in plots.iter().enumerate() {
         let series: Vec<(f32, f32)> = row
             .iter()
@@ -105,8 +251,64 @@ pub fn draw_steering_table(
             .draw_series(LineSeries::new(series, &Palette99::pick(i)))?
             .label(format!(
                 "Steer {}°",
-                table.key_steer_angle[i] as f32 * table.scalling_factor
+                table.key_steer_angle[i] as f32 / table.scalling_factor
             ))
+            .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &Palette99::pick(i)));
+    }
+
+    chart
+        .configure_series_labels()
+        .position(SeriesLabelPosition::UpperRight) // position legend
+        .background_style(&WHITE.mix(0.8))
+        .border_style(&BLACK)
+        .draw()?; // actually draw it
+
+    // ----
+
+    let root = BitMapBackend::new(&path_speed, (1200, 800)).into_drawing_area();
+    root.fill(&WHITE)?;
+
+    let x_max = table.key_steer_angle.last().copied().unwrap() as f32 / table.scalling_factor;
+    let y_max = table.max_wheel_angle;
+
+    let mut chart = ChartBuilder::on(&root)
+        .caption("TBD", ("sans-serif", 30))
+        .margin(10)
+        .x_label_area_size(40)
+        .y_label_area_size(40)
+        .build_cartesian_2d(0f32..x_max as f32, 0f32..y_max)?;
+
+    chart
+        .configure_mesh()
+        .x_desc("Steer Angle (°)")
+        .y_desc("Wheel Angle (°)")
+        .draw()?;
+
+    let mut plots: Vec<Vec<f32>> = Vec::new();
+    for speed in table.key_speed {
+        let mut plot: Vec<f32> = Vec::new();
+        for steer_angle in table.key_steer_angle {
+            let wheel_angle = table.get_wheel_angle(speed as f32, steer_angle as f32);
+            plot.push(wheel_angle);
+        }
+        plots.push(plot);
+    }
+
+    for (i, row) in plots.iter().enumerate() {
+        let series: Vec<(f32, f32)> = row
+            .iter()
+            .enumerate()
+            .map(|(j, &wheel_angle)| {
+                (
+                    table.key_steer_angle[j] as f32 / table.scalling_factor,
+                    wheel_angle,
+                )
+            })
+            .collect();
+
+        chart
+            .draw_series(LineSeries::new(series, &Palette99::pick(i)))?
+            .label(format!("Speed {} km/h", table.key_speed[i] as f32))
             .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &Palette99::pick(i)));
     }
 

@@ -40,6 +40,10 @@ impl SteeringTable {
     pub fn new(factor: f32, angle: f32, model: &str) -> Self {
         if model == "A424" {
             data::get_data_a424(factor, angle)
+        } else if model == "A480" {
+            data::get_data_a480(factor, angle)
+        } else if model == "LAFERRARI" {
+            data::get_data_laferrari(factor, angle)
         } else {
             panic!("Wrong model")
         }
@@ -120,16 +124,7 @@ fn main() -> Result<()> {
             let model: String = std::env::var("CAR_MODEL").unwrap_or_else(|_| "A424".to_string());
             let table = SteeringTable::new(factor, steer_limit_angle, &model);
 
-            let mut plots: Vec<Vec<f32>> = Vec::new();
-            for steer_angle in table.key_steer_angle {
-                let mut plot: Vec<f32> = Vec::new();
-                for speed in table.key_speed {
-                    let wheel_angle = table.get_wheel_angle(speed as f32, steer_angle as f32);
-                    plot.push(wheel_angle);
-                }
-                plots.push(plot);
-            }
-            draw_steering_table(&table, plots, "steering_table.png");
+            draw_steering_table(&table, "steering_table").unwrap();
 
             unsafe {
                 let vjoy = match vJoyInterface::new(Path::new(
