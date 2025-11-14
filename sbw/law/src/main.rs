@@ -30,10 +30,10 @@ struct FFBData {
 #[derive(Debug)]
 pub struct SteeringTable {
     pub wheel_angles: [[f32; 14]; 13],
-    pub key_steer_angle: [i32; 13],
-    pub key_speed: [i32; 14],
+    pub key_steer_angle: [f32; 13],
+    pub key_speed: [f32; 14],
     pub max_wheel_angle: f32,
-    pub scalling_factor: f32,
+    pub factor: f32,
 }
 
 impl SteeringTable {
@@ -51,12 +51,14 @@ impl SteeringTable {
 
     pub fn get_wheel_angle(&self, speed: f32, steer_angle: f32) -> f32 {
         let sign = steer_angle.signum(); // Save the original sign
-        let steer_abs = steer_angle.abs() * self.scalling_factor; // Use absolute value for table lookup
+        // let steer_abs = steer_angle.abs() * self.scalling_factor; // Use absolute value for table lookup
+
+        let steer_abs = steer_angle.abs(); // Use absolute value for table lookup
 
         // Find closest speed indices in the key table
         let s_idx = match self
             .key_speed
-            .binary_search_by(|v| v.partial_cmp(&(speed as i32)).unwrap())
+            .binary_search_by(|v| v.partial_cmp(&speed).unwrap())
         {
             Ok(i) => i,
             Err(i) => i.saturating_sub(1),
@@ -73,7 +75,7 @@ impl SteeringTable {
         // Find closest steer angle indices
         let a_idx = match self
             .key_steer_angle
-            .binary_search_by(|v| v.partial_cmp(&(steer_abs as i32)).unwrap())
+            .binary_search_by(|v| v.partial_cmp(&steer_abs).unwrap())
         {
             Ok(i) => i,
             Err(i) => i.saturating_sub(1),

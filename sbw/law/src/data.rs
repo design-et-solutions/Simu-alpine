@@ -1,6 +1,9 @@
 use crate::SteeringTable;
 
 pub fn get_data_a424(factor: f32, angle: f32) -> SteeringTable {
+    let old_max_steer = 230.0; // original table max steer
+    let max_physical_steer = angle; // your wheel ±45°
+
     let values = [
         [0.0; 14],
         [
@@ -52,22 +55,29 @@ pub fn get_data_a424(factor: f32, angle: f32) -> SteeringTable {
             10.3623188, 7.82608696, 5.84707646, 4.11067194, 3.22580645, 3.22580645, 3.22580645,
         ],
     ];
-    let key_steer_angle = [0, 10, 20, 30, 40, 50, 60, 75, 90, 110, 140, 180, 230];
-    let key_speed = [0, 30, 40, 50, 60, 70, 90, 110, 130, 160, 200, 250, 300, 350];
-
-    let old_max_steer = 230.0; // original table max steer
-    let max_physical_steer = angle; // your wheel ±45°
+    let mut key_steer_angle = [
+        0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 75.0, 90.0, 110.0, 140.0, 180.0, 230.0,
+    ];
+    key_steer_angle.iter_mut().for_each(|a| {
+        *a = *a * (max_physical_steer / old_max_steer) * factor;
+    });
+    let key_speed = [
+        0.0, 30.0, 40.0, 50.0, 60.0, 70.0, 90.0, 110.0, 130.0, 160.0, 200.0, 250.0, 300.0, 350.0,
+    ];
 
     SteeringTable {
         wheel_angles: values,
         key_steer_angle,
         key_speed,
         max_wheel_angle: 30.6666667,
-        scalling_factor: (old_max_steer / max_physical_steer) * factor,
+        factor,
     }
 }
 
 pub fn get_data_a480(factor: f32, angle: f32) -> SteeringTable {
+    let old_max_steer = 150.0; // original table max steer
+    let max_physical_steer = angle; // your wheel ±45°
+
     let values = [
         [0.0; 14],
         [
@@ -119,22 +129,29 @@ pub fn get_data_a480(factor: f32, angle: f32) -> SteeringTable {
             8.47826087, 6.08695652, 3.89805097, 3.42555995, 2.58064516, 2.58064516, 2.58064516,
         ],
     ];
-    let key_steer_angle = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 150];
-    let key_speed = [0, 30, 40, 50, 60, 70, 90, 110, 130, 160, 200, 250, 300, 350];
-
-    let old_max_steer = 150.0; // original table max steer
-    let max_physical_steer = angle; // your wheel ±45°
+    let mut key_steer_angle = [
+        0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0, 110.0, 150.0,
+    ];
+    key_steer_angle.iter_mut().for_each(|a| {
+        *a = *a * (max_physical_steer / old_max_steer) * factor;
+    });
+    let key_speed = [
+        0.0, 30.0, 40.0, 50.0, 60.0, 70.0, 90.0, 110.0, 130.0, 160.0, 200.0, 250.0, 300.0, 350.0,
+    ];
 
     SteeringTable {
         wheel_angles: values,
         key_steer_angle,
         key_speed,
         max_wheel_angle: 15.7894737,
-        scalling_factor: (old_max_steer / max_physical_steer) * factor,
+        factor,
     }
 }
 
 pub fn get_data_laferrari(factor: f32, angle: f32) -> SteeringTable {
+    let old_max_steer = 210.0; // original table max steer
+    let max_physical_steer = angle; // your wheel ±45°
+
     let values = [
         [0.0; 14],
         [
@@ -186,18 +203,22 @@ pub fn get_data_laferrari(factor: f32, angle: f32) -> SteeringTable {
             5.0, 3.73563218, 2.62626263, 2.58064516, 2.58064516, 2.58064516,
         ],
     ];
-    let key_steer_angle = [0, 10, 20, 30, 40, 50, 60, 75, 90, 110, 130, 160, 210];
-    let key_speed = [0, 30, 40, 50, 60, 70, 90, 110, 130, 160, 200, 250, 300, 350];
-
-    let old_max_steer = 210.0; // original table max steer
-    let max_physical_steer = angle; // your wheel ±45°
+    let mut key_steer_angle = [
+        0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 75.0, 90.0, 110.0, 130.0, 160.0, 210.0,
+    ];
+    key_steer_angle.iter_mut().for_each(|a| {
+        *a = *a * (max_physical_steer / old_max_steer) * factor;
+    });
+    let key_speed = [
+        0.0, 30.0, 40.0, 50.0, 60.0, 70.0, 90.0, 110.0, 130.0, 160.0, 200.0, 250.0, 300.0, 350.0,
+    ];
 
     SteeringTable {
         wheel_angles: values,
         key_steer_angle,
         key_speed,
         max_wheel_angle: 28.0,
-        scalling_factor: (old_max_steer / max_physical_steer) * factor,
+        factor,
     }
 }
 
@@ -218,7 +239,13 @@ pub fn draw_steering_table(
     let y_max = table.max_wheel_angle;
 
     let mut chart = ChartBuilder::on(&root)
-        .caption("TBD", ("sans-serif", 30))
+        .caption(
+            format!(
+                "Wheel Angle vs. Speed at Different Steer Angles (factor {})",
+                table.factor
+            ),
+            ("sans-serif", 30),
+        )
         .margin(10)
         .x_label_area_size(40)
         .y_label_area_size(40)
@@ -249,10 +276,7 @@ pub fn draw_steering_table(
 
         chart
             .draw_series(LineSeries::new(series, &Palette99::pick(i)))?
-            .label(format!(
-                "Steer {}°",
-                table.key_steer_angle[i] as f32 / table.scalling_factor
-            ))
+            .label(format!("Steer {}°", table.key_steer_angle[i]))
             .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &Palette99::pick(i)));
     }
 
@@ -268,11 +292,17 @@ pub fn draw_steering_table(
     let root = BitMapBackend::new(&path_speed, (1200, 800)).into_drawing_area();
     root.fill(&WHITE)?;
 
-    let x_max = table.key_steer_angle.last().copied().unwrap() as f32 / table.scalling_factor;
+    let x_max = table.key_steer_angle.last().copied().unwrap();
     let y_max = table.max_wheel_angle;
 
     let mut chart = ChartBuilder::on(&root)
-        .caption("TBD", ("sans-serif", 30))
+        .caption(
+            format!(
+                "Wheel Angle vs. Steer Angle at Different Speeds (factor {})",
+                table.factor
+            ),
+            ("sans-serif", 30),
+        )
         .margin(10)
         .x_label_area_size(40)
         .y_label_area_size(40)
@@ -298,12 +328,7 @@ pub fn draw_steering_table(
         let series: Vec<(f32, f32)> = row
             .iter()
             .enumerate()
-            .map(|(j, &wheel_angle)| {
-                (
-                    table.key_steer_angle[j] as f32 / table.scalling_factor,
-                    wheel_angle,
-                )
-            })
+            .map(|(j, &wheel_angle)| (table.key_steer_angle[j], wheel_angle))
             .collect();
 
         chart
